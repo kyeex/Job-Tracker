@@ -173,13 +173,9 @@ export default function Home() {
     <main>
       <header className="topbar">
         <a className="brand" href="#"><span className="brandMark">J</span><span>Jobfolio</span></a>
+        <button className="mainActionButton" onClick={openAdd} aria-label="Add a new job application"><span className="mainActionIcon" aria-hidden="true">＋</span><span className="mainActionCopy"><strong>Add application</strong><small>Track a new opportunity</small></span></button>
         <div className="headerActions"><span className="localBadge"><i /> Saved locally</span><button className="iconButton" onClick={exportData} aria-label="Download backup" title="Download backup">↓</button></div>
       </header>
-
-      <section className="hero">
-        <div><p className="eyebrow">YOUR CAREER COMMAND CENTER</p><h1>Make your next move<br/><em>the right one.</em></h1><p className="heroCopy">Keep every opportunity organized, follow up with confidence, and turn applications into offers.</p></div>
-        <button className="primaryButton" onClick={openAdd}><span>＋</span> Add application</button>
-      </section>
 
       <section className="stats" aria-label="Application summary">
         <div className="statCard accent"><span className="statIcon">↗</span><div><strong>{jobs.length}</strong><span>Total applications</span></div><small>All time</small></div>
@@ -239,7 +235,7 @@ export default function Home() {
           </tr>
         </thead><tbody>
           {visibleJobs.map((job) => <tr key={job.id}>
-            <td><div className="opportunity"><span className="companyAvatar">{job.company.slice(0, 1).toUpperCase()}</span><div><strong>{job.title}</strong><span>{job.company}{job.url && <a href={job.url.startsWith("http") ? job.url : `https://${job.url}`} target="_blank" rel="noreferrer" aria-label={`Open ${job.company} job posting`}> ↗</a>}</span></div></div></td>
+            <td><div className="opportunity"><span className="companyAvatar">{job.company.slice(0, 1).toUpperCase()}</span><div>{job.url ? <a className="jobTitleLink" href={job.url.startsWith("http") ? job.url : `https://${job.url}`} target="_blank" rel="noopener noreferrer" aria-label={`Open ${job.title} at ${job.company} in a new tab`}><strong>{job.title}<span className="newTabMark" aria-hidden="true">↗</span></strong></a> : <strong>{job.title}</strong>}<span>{job.company}</span></div></div></td>
             <td>{new Date(`${job.date}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</td>
             <td><select className={`statusSelect status-${job.status.toLowerCase()}`} value={job.status} onChange={(e) => setJobs((items) => items.map((item) => item.id === job.id ? { ...item, status: e.target.value as Status } : item))}>{statusOrder.map((status) => <option key={status}>{status}</option>)}</select></td>
             <td className="notesCell">{job.notes || <span>—</span>}</td>
@@ -247,6 +243,11 @@ export default function Home() {
           </tr>)}
           {!visibleJobs.length && <tr><td colSpan={5}><div className="empty tableEmpty"><span>✦</span><h3>No matching opportunities</h3><p>Adjust or clear a filter to see more roles.</p>{hasColumnFilters && <button onClick={() => setColumnFilters({ opportunity: "", date: "", status: "All", notes: "" })}>Clear column filters</button>}</div></td></tr>}
         </tbody></table></div> : <div className="empty"><span>✦</span><h3>No opportunities here yet</h3><p>Add your first application to start tracking.</p><button onClick={openAdd}>Add application</button></div>}
+      </section>
+
+      <section className="hero heroBottom">
+        <div><p className="eyebrow">YOUR CAREER COMMAND CENTER</p><h1>Make your next move<br/><em>the right one.</em></h1><p className="heroCopy">Keep every opportunity organized, follow up with confidence, and turn applications into offers.</p></div>
+        <figure className="careerVisual"><img src="/career-command-center.png" alt="Professional working at a desk with plants and an upward growth chart" /><figcaption className="srOnly">Career growth and focused job-search progress</figcaption></figure>
       </section>
 
       {dialogOpen && <div className="modalBackdrop" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setDialogOpen(false)}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
