@@ -1,5 +1,7 @@
-import { importJobs, type JobImportRecord } from "@/db/jobs";
-import { jsonError, jsonOk, readJson, validateJobPayload } from "../_shared";
+import { importJobs } from "@/db/jobs";
+import type { JobImportRecord } from "@/lib/jobs/types";
+import { validateJobPayload } from "@/lib/jobs/validation";
+import { jsonError, jsonOk, readJson } from "../_shared";
 import { requireJobsApiAccess } from "../_security";
 
 export async function POST(request: Request) {

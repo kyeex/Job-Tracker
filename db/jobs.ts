@@ -1,36 +1,7 @@
 import { getD1Database } from "./index";
+import { mapJobRow, normalizeJobInput } from "@/lib/jobs/mappers";
+import type { JobApplicationRow, JobImportRecord, JobInput, JobUpdateInput } from "@/lib/jobs/types";
 import type { JobApplication } from "./schema";
-
-export type JobStatus = JobApplication["status"];
-
-export type JobInput = {
-  dateApplied: string;
-  jobTitle: string;
-  company: string;
-  jobUrl?: string;
-  status?: JobStatus;
-  notes?: string;
-};
-
-export type JobUpdateInput = Partial<JobInput>;
-
-export type JobImportRecord = JobInput & {
-  id?: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-type JobApplicationRow = {
-  id: string;
-  date_applied: string;
-  job_title: string;
-  company: string;
-  job_url: string;
-  status: JobStatus;
-  notes: string;
-  created_at: string;
-  updated_at: string;
-};
 
 const jobColumns = `
   id,
@@ -44,33 +15,8 @@ const jobColumns = `
   updated_at
 `;
 
-function mapJob(row: JobApplicationRow): JobApplication {
-  return {
-    id: row.id,
-    dateApplied: row.date_applied,
-    jobTitle: row.job_title,
-    company: row.company,
-    jobUrl: row.job_url,
-    status: row.status,
-    notes: row.notes,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
-
 function makeId() {
   return crypto.randomUUID();
-}
-
-function normalizeInput(input: JobInput) {
-  return {
-    dateApplied: input.dateApplied,
-    jobTitle: input.jobTitle.trim(),
-    company: input.company.trim(),
-    jobUrl: input.jobUrl?.trim() ?? "",
-    status: input.status ?? "Applied",
-    notes: input.notes?.trim() ?? "",
-  };
 }
 
 async function getJobById(id: string) {
@@ -80,7 +26,7 @@ async function getJobById(id: string) {
     .bind(id)
     .first<JobApplicationRow>();
 
-  return row ? mapJob(row) : null;
+  return row ? (mapJobRow(row) as JobApplication) : null;
 }
 
 export async function listJobs() {
@@ -93,13 +39,13 @@ export async function listJobs() {
     )
     .all<JobApplicationRow>();
 
-  return results.map(mapJob);
+  return results.map((row) => mapJobRow(row) as JobApplication);
 }
 
 export async function createJob(input: JobInput) {
   const db = getD1Database();
   const id = makeId();
-  const values = normalizeInput(input);
+  const values = normalizeJobInput(input);
 
   await db
     .prepare(
@@ -181,7 +127,7 @@ export async function importJobs(records: JobImportRecord[]) {
   const db = getD1Database();
   const statements = records.map((record) => {
     const id = record.id ?? makeId();
-    const values = normalizeInput(record);
+    const values = normalizeJobInput(record);
 
     return db
       .prepare(

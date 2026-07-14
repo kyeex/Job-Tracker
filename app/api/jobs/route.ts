@@ -1,5 +1,6 @@
 import { createJob, listJobs } from "@/db/jobs";
-import { jsonError, jsonOk, readJson, validateJobPayload } from "./_shared";
+import { validateJobPayload } from "@/lib/jobs/validation";
+import { jsonError, jsonOk, readJson } from "./_shared";
 import { requireJobsApiAccess } from "./_security";
 
 export async function GET(request: Request) {

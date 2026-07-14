@@ -1,5 +1,6 @@
 import { deleteJob, updateJob } from "@/db/jobs";
-import { jsonError, jsonOk, readJson, validateJobPayload } from "../_shared";
+import { validateJobPayload } from "@/lib/jobs/validation";
+import { jsonError, jsonOk, readJson } from "../_shared";
 import { requireJobsApiAccess } from "../_security";
 
 type RouteContext = {

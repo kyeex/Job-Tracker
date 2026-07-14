@@ -9,15 +9,23 @@ This repo is connected to Firebase project `job-tracker-a8bee` through `.firebas
 - Firestore security rules that scope job applications to the signed-in user
 - Firestore composite indexes for common job-tracker filters and sorts
 
+## Architecture decision
+
+The selected target architecture is **Firebase Auth + Cloud Firestore**.
+
+The current D1-backed API routes are transitional. The next implementation passes should migrate the app's read/write paths to Firebase Auth + Firestore and then remove the D1-specific API/database layer after verification.
+
+Firestore documents should live at:
+
+```text
+users/{userId}/jobApplications/{applicationId}
+```
+
+The checked-in Firestore rules already enforce user ownership for that path.
+
 ## Hosting note
 
-The current app is built with `vinext`, Cloudflare Worker-style server output, and D1-backed API routes. Firebase Hosting can serve the generated static client assets from `dist/client`, but the job tracker will still need a Firebase-compatible backend before a public Firebase deployment can run the full CRUD experience.
-
-Good next choices:
-
-1. Keep the current D1/Sites deployment for the full app and use Firebase only for project scaffolding.
-2. Move the app to Firebase Auth + Firestore, then deploy as a Firebase-first app.
-3. Put the server app behind Firebase Hosting using a Firebase-supported backend such as Cloud Run, then replace or bridge D1 persistence.
+Firebase Hosting can serve the generated static client assets from `dist/client`. The full CRUD experience should not be considered production-ready on Firebase until the app's data layer uses Firebase Auth + Firestore.
 
 ## Useful commands
 
@@ -28,4 +36,4 @@ npx firebase-tools deploy --only firestore:rules,firestore:indexes --project job
 npx firebase-tools deploy --only hosting --project job-tracker-a8bee
 ```
 
-Do not use the Hosting deploy as the final production path until the backend/database decision above is complete.
+Do not use the Hosting deploy as the final production path until the Firebase Auth + Firestore read/write migration is complete.

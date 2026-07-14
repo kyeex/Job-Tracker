@@ -1,8 +1,17 @@
-# vinext-starter
+# Jobfolio
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Jobfolio is a personal job-application tracker with an opportunities grid,
+filters, sorting, application rhythm heat map, local migration flow, backup
+export, and XLSX export.
+
+## Architecture direction
+
+The selected production architecture is **Firebase Auth + Cloud Firestore**.
+
+The current D1-backed API routes are transitional while the Firebase migration is
+implemented. See [ARCHITECTURE.md](./ARCHITECTURE.md) and
+[FIREBASE.md](./FIREBASE.md) for the target runtime, data path, and migration
+plan.
 
 ## Prerequisites
 
@@ -16,16 +25,18 @@ npm run dev
 npm run build
 ```
 
-This starter does not use `wrangler.jsonc`.
+The current local app still uses the existing Vinext/D1 development path until
+the Firebase Auth + Firestore read/write migration is complete.
 
 ## Included Shape
 
 - edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+- `lib/jobs/` centralizes job domain types, constants, mappers, and validation
+- `app/components/` contains the split UI sections
+- `app/hooks/` contains data, filter, migration, and toast state hooks
+- `firebase.json`, `firestore.rules`, and `firestore.indexes.json` define the
+  Firebase target scaffolding
+- `.openai/hosting.json` currently keeps the temporary local D1 binding alive
 
 ## Workspace Auth Headers
 
@@ -89,10 +100,14 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 
 - `npm run dev`: start local development
 - `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+- `npm test`: build the app and run structural/export tests
+- `npm run firebase:emulators`: start Firebase Auth, Firestore, and Hosting emulators
+- `npm run firebase:deploy:rules`: deploy Firestore rules and indexes
+- `npm run firebase:deploy:hosting`: build and deploy Firebase Hosting assets
+- `npm run db:generate`: transitional D1 migration generation while D1 remains
 
 ## Learn More
 
 - [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+- [Firebase setup](./FIREBASE.md)
+- [Architecture decision](./ARCHITECTURE.md)

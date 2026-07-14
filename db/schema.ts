@@ -1,5 +1,8 @@
 import { sql } from "drizzle-orm";
 import { check, index, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { DEFAULT_JOB_STATUS, JOB_FIELD_LIMITS, JOB_STATUSES } from "@/lib/jobs/constants";
+
+const quotedJobStatuses = JOB_STATUSES.map((status) => `'${status}'`).join(", ");
 
 export const jobApplications = sqliteTable(
   "job_applications",
@@ -10,10 +13,10 @@ export const jobApplications = sqliteTable(
     company: text("company").notNull(),
     jobUrl: text("job_url").notNull().default(""),
     status: text("status", {
-      enum: ["Applied", "Interview", "Offer", "Rejected"],
+      enum: JOB_STATUSES,
     })
       .notNull()
-      .default("Applied"),
+      .default(DEFAULT_JOB_STATUS),
     notes: text("notes").notNull().default(""),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -29,23 +32,23 @@ export const jobApplications = sqliteTable(
     ),
     check(
       "job_applications_status_check",
-      sql`${table.status} IN ('Applied', 'Interview', 'Offer', 'Rejected')`,
+      sql`${table.status} IN ${sql.raw(`(${quotedJobStatuses})`)}`,
     ),
     check(
       "job_applications_job_title_check",
-      sql`length(trim(${table.jobTitle})) BETWEEN 1 AND 200`,
+      sql`length(trim(${table.jobTitle})) BETWEEN 1 AND ${sql.raw(String(JOB_FIELD_LIMITS.title))}`,
     ),
     check(
       "job_applications_company_check",
-      sql`length(trim(${table.company})) BETWEEN 1 AND 200`,
+      sql`length(trim(${table.company})) BETWEEN 1 AND ${sql.raw(String(JOB_FIELD_LIMITS.company))}`,
     ),
     check(
       "job_applications_job_url_length_check",
-      sql`length(${table.jobUrl}) <= 2048`,
+      sql`length(${table.jobUrl}) <= ${sql.raw(String(JOB_FIELD_LIMITS.url))}`,
     ),
     check(
       "job_applications_notes_length_check",
-      sql`length(${table.notes}) <= 10000`,
+      sql`length(${table.notes}) <= ${sql.raw(String(JOB_FIELD_LIMITS.notes))}`,
     ),
   ],
 );
