@@ -17,6 +17,9 @@
     "firebase:deploy:hosting": "npm run build && npx firebase-tools deploy --only hosting --project job-tracker-a8bee"
   },
   "dependencies": {
+    "@firebase/app": "^0.15.1",
+    "@firebase/auth": "^1.13.3",
+    "@firebase/firestore": "^4.16.0",
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
     "react": "19.2.6",

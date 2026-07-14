@@ -2,8 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { mapApiJob, toJobPayload } from "@/lib/jobs/mappers";
-import type { ApiJob, Job, LoadState, Status } from "@/lib/jobs/types";
-import { apiRequest } from "../lib/api-client";
+import type { Job, LoadState, Status } from "@/lib/jobs/types";
+import {
+  createFirestoreJob,
+  deleteFirestoreJob,
+  importFirestoreJobs,
+  listFirestoreJobs,
+  updateFirestoreJob,
+} from "../lib/firestore-jobs";
 
 export function useJobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -17,22 +23,13 @@ export function useJobs() {
     setLoadError("");
 
     try {
-      const response = await fetch("/api/jobs", { cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data?.error?.message || "Unable to load applications.");
-      }
-
-      if (!Array.isArray(data.jobs)) {
-        throw new Error("The application list was not returned correctly.");
-      }
-
-      setJobs(data.jobs.map(mapApiJob));
+      const data = await listFirestoreJobs();
+      setJobs(data.map(mapApiJob));
       setLoadState("ready");
     } catch (error) {
       setJobs([]);
       setLoadState("error");
-      setLoadError(error instanceof Error ? error.message : "Unable to load applications.");
+      setLoadError(error instanceof Error ? error.message : "Unable to load applications from Firestore.");
     }
   }, []);
 
@@ -41,23 +38,18 @@ export function useJobs() {
   }, [loadJobs]);
 
   const addJob = useCallback(async (job: Omit<Job, "id">) => {
-    const data = await apiRequest<{ job: ApiJob }>("/api/jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(toJobPayload(job)),
-    });
-    const saved = mapApiJob(data.job);
+    const saved = mapApiJob(await createFirestoreJob(toJobPayload(job)));
     setJobs((items) => [saved, ...items]);
     return saved;
   }, []);
 
   const editJob = useCallback(async (id: string, job: Omit<Job, "id">) => {
-    const data = await apiRequest<{ job: ApiJob }>(`/api/jobs/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(toJobPayload(job)),
-    });
-    const saved = mapApiJob(data.job);
+    const data = await updateFirestoreJob(id, toJobPayload(job));
+    if (!data) {
+      throw new Error("The application could not be found in Firestore.");
+    }
+
+    const saved = mapApiJob(data);
     setJobs((items) => items.map((item) => (item.id === id ? saved : item)));
     return saved;
   }, []);
@@ -65,7 +57,7 @@ export function useJobs() {
   const deleteJob = useCallback(async (id: string) => {
     setDeletingIds((current) => new Set(current).add(id));
     try {
-      await apiRequest<{ deleted: true }>(`/api/jobs/${id}`, { method: "DELETE" });
+      await deleteFirestoreJob(id);
       setJobs((items) => items.filter((job) => job.id !== id));
     } finally {
       setDeletingIds((current) => {
@@ -84,12 +76,12 @@ export function useJobs() {
 
       setSavingStatusIds((current) => new Set(current).add(job.id));
       try {
-        const data = await apiRequest<{ job: ApiJob }>(`/api/jobs/${job.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status }),
-        });
-        const saved = mapApiJob(data.job);
+        const data = await updateFirestoreJob(job.id, { status });
+        if (!data) {
+          throw new Error("The application could not be found in Firestore.");
+        }
+
+        const saved = mapApiJob(data);
         setJobs((items) => items.map((item) => (item.id === job.id ? saved : item)));
         return saved;
       } finally {
@@ -103,6 +95,13 @@ export function useJobs() {
     [deletingIds, savingStatusIds],
   );
 
+  const importJobs = useCallback(async (records: Parameters<typeof importFirestoreJobs>[0]) => {
+    const result = await importFirestoreJobs(records);
+    const data = await listFirestoreJobs();
+    setJobs(data.map(mapApiJob));
+    return { result, jobs: data };
+  }, []);
+
   return {
     jobs,
     setJobs,
@@ -115,5 +114,6 @@ export function useJobs() {
     editJob,
     deleteJob,
     updateJobStatus,
+    importJobs,
   };
 }

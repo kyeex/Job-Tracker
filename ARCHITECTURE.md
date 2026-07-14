@@ -4,7 +4,7 @@
 
 The target production architecture for Jobfolio is **Firebase Auth + Cloud Firestore**.
 
-The existing Cloudflare D1 implementation is now considered a transitional data layer. It should remain in place only until the Firebase migration is implemented, verified, and browser/D1 records are migrated into Firestore.
+The existing Cloudflare D1 implementation is now considered a transitional data layer. The browser app's active read/write path is Firebase Auth + Firestore. D1 should remain in place only until existing browser/D1 records are migrated into Firestore and the old API/database code is removed.
 
 ## Target runtime
 
@@ -58,7 +58,8 @@ Anonymous production access should not be able to read, create, update, delete, 
 - Firebase project: `job-tracker-a8bee`
 - Firebase Hosting/Auth/Firestore emulator config exists in `firebase.json`
 - Firestore rules and indexes are version-controlled
-- The UI and API currently still use D1-backed `/api/jobs` routes
+- The UI uses Firebase Auth + Firestore for job reads and writes
+- D1-backed `/api/jobs` routes still exist as transitional code
 - D1 should not be treated as the long-term production database
 
 ## Deployment target

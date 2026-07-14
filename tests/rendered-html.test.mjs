@@ -28,9 +28,10 @@ test("job tracker replaces the starter skeleton with product UI", async () => {
 });
 
 test("job tracker keeps the expected database and migration affordances", async () => {
-  const [migrationHook, schema, apiRoute, importRoute, table, exportHelper, constants, validation] =
+  const [migrationHook, firestoreJobs, schema, apiRoute, importRoute, table, exportHelper, constants, validation] =
     await Promise.all([
     readFile(new URL("hooks/useLegacyMigration.ts", appRoot), "utf8"),
+    readFile(new URL("lib/firestore-jobs.ts", appRoot), "utf8"),
     readFile(new URL("../db/schema.ts", appRoot), "utf8"),
     readFile(new URL("api/jobs/route.ts", appRoot), "utf8"),
     readFile(new URL("api/jobs/import/route.ts", appRoot), "utf8"),
@@ -41,7 +42,8 @@ test("job tracker keeps the expected database and migration affordances", async 
   ]);
 
   assert.match(migrationHook, /legacyJobsKey = "job-tracker-jobs"/);
-  assert.match(migrationHook, /\/api\/jobs\/import/);
+  assert.match(migrationHook, /importJobs/);
+  assert.match(firestoreJobs, /importFirestoreJobs/);
   assert.match(table, /Export Excel/);
   assert.match(exportHelper, /sheetData/);
   assert.match(schema, /job_applications/);
@@ -98,12 +100,14 @@ test("job domain types, constants, mappers, and validation are centralized", asy
 });
 
 test("deployment architecture is documented as Firebase Auth plus Firestore", async () => {
-  const [architecture, firebase, security, readme, rules] = await Promise.all([
+  const [architecture, firebase, security, readme, rules, useJobs, firestoreJobs] = await Promise.all([
     readFile(new URL("../ARCHITECTURE.md", appRoot), "utf8"),
     readFile(new URL("../FIREBASE.md", appRoot), "utf8"),
     readFile(new URL("../SECURITY_DECISION.md", appRoot), "utf8"),
     readFile(new URL("../README.md", appRoot), "utf8"),
     readFile(new URL("../firestore.rules", appRoot), "utf8"),
+    readFile(new URL("hooks/useJobs.ts", appRoot), "utf8"),
+    readFile(new URL("lib/firestore-jobs.ts", appRoot), "utf8"),
   ]);
 
   for (const document of [architecture, firebase, security, readme]) {
@@ -114,4 +118,8 @@ test("deployment architecture is documented as Firebase Auth plus Firestore", as
   assert.match(firebase, /current D1-backed API routes are transitional/i);
   assert.match(security, /request\.auth\.uid == userId/);
   assert.match(rules, /users\/\{userId\}\/jobApplications\/\{applicationId\}/);
+  assert.match(useJobs, /listFirestoreJobs/);
+  assert.match(useJobs, /createFirestoreJob/);
+  assert.match(firestoreJobs, /users", userId, "jobApplications/);
+  assert.doesNotMatch(useJobs, /\/api\/jobs/);
 });

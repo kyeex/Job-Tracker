@@ -3,9 +3,10 @@
 This tracker is moving toward a Firebase Auth + Cloud Firestore production
 architecture.
 
-During the transition, localhost API requests are allowed so the app remains
-usable for personal D1 development. Public or non-local API requests are blocked
-by default in `app/api/jobs/_security.ts`.
+During the transition, the browser app uses Firebase Auth + Firestore for job
+records. Localhost D1 API requests are still allowed only so legacy/transitional
+D1 development remains possible. Public or non-local API requests are blocked by
+default in `app/api/jobs/_security.ts`.
 
 The target production security model is:
 
@@ -17,7 +18,7 @@ The target production security model is:
 - Anonymous requests cannot read, create, update, delete, export, or import job
   records.
 
-Until the Firestore read/write path replaces D1, public API requests fail
-closed. Anonymous public requests receive `401 authentication_required`;
-authenticated public requests receive `403 owner_scope_required` so global D1
-records cannot be exposed or modified.
+Until the D1 API routes are removed, public API requests fail closed. Anonymous
+public requests receive `401 authentication_required`; authenticated public
+requests receive `403 owner_scope_required` so global D1 records cannot be
+exposed or modified.

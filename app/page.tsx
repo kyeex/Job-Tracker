@@ -29,6 +29,7 @@ export default function Home() {
     editJob,
     deleteJob,
     updateJobStatus,
+    importJobs,
   } = useJobs();
   const {
     search,
@@ -45,7 +46,7 @@ export default function Home() {
     visibleJobs,
   } = useJobFilters(jobs);
   const { toast, showToast } = useToast();
-  const { migration, importLegacyApplications } = useLegacyMigration({ setJobs, showToast });
+  const { migration, importLegacyApplications } = useLegacyMigration({ setJobs, showToast, importJobs });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyJob);
@@ -162,7 +163,7 @@ export default function Home() {
         </button>
         <div className="headerActions">
           <span className={`localBadge ${hasLoadError ? "warning" : ""}`}>
-            <i /> {isLoadingJobs ? "Loading database" : hasLoadError ? "Database retry needed" : "Loaded from database"}
+            <i /> {isLoadingJobs ? "Loading Firestore" : hasLoadError ? "Firestore retry needed" : "Loaded from Firestore"}
           </span>
           <button className="iconButton" onClick={exportData} aria-label="Download backup" title="Download backup">
             ↓
@@ -212,7 +213,7 @@ export default function Home() {
       <Toast message={toast} />
       <footer>
         <span>Jobfolio</span>
-        <p>Your applications load from the local D1 database.</p>
+        <p>Your applications load from Firebase Firestore.</p>
       </footer>
     </main>
   );

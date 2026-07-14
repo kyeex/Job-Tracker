@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { mapApiJob } from "@/lib/jobs/mappers";
-import type { ApiJob, Job, MigrationRecord, MigrationState, Status } from "@/lib/jobs/types";
-import { apiRequest } from "../lib/api-client";
+import type { ApiJob, Job, JobImportRecord, MigrationRecord, MigrationState, Status } from "@/lib/jobs/types";
 
 const legacyJobsKey = "job-tracker-jobs";
 const migrationCompleteKey = "job-tracker-d1-migration-complete";
@@ -84,9 +83,11 @@ function downloadJsonBackup(raw: string, filename: string) {
 export function useLegacyMigration({
   setJobs,
   showToast,
+  importJobs,
 }: {
   setJobs: React.Dispatch<React.SetStateAction<Job[]>>;
   showToast: (message: string) => void;
+  importJobs: (records: JobImportRecord[]) => Promise<{ result: { imported: number }; jobs: ApiJob[] }>;
 }) {
   const [migration, setMigration] = useState<MigrationState>({ status: "hidden", count: 0 });
 
@@ -135,24 +136,19 @@ export function useLegacyMigration({
       window.localStorage.setItem(`${migrationBackupKey}-created-at`, new Date().toISOString());
       downloadJsonBackup(legacy.raw, backupName);
 
-      const imported = await apiRequest<{ imported: number }>("/api/jobs/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ records: legacy.records }),
-      });
+      const { result: imported, jobs } = await importJobs(legacy.records);
 
       if (imported.imported !== legacy.records.length) {
         throw new Error(`Imported ${imported.imported} of ${legacy.records.length} existing applications.`);
       }
 
-      const data = await apiRequest<{ jobs: ApiJob[] }>("/api/jobs");
       const importedIds = new Set(legacy.records.map((record) => record.id));
-      const verifiedCount = data.jobs.filter((job) => importedIds.has(job.id)).length;
+      const verifiedCount = jobs.filter((job) => importedIds.has(job.id)).length;
       if (verifiedCount !== importedIds.size) {
         throw new Error(`Verified ${verifiedCount} of ${importedIds.size} imported applications.`);
       }
 
-      setJobs(data.jobs.map(mapApiJob));
+      setJobs(jobs.map(mapApiJob));
       window.localStorage.setItem(
         migrationCompleteKey,
         JSON.stringify({

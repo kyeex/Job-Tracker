@@ -8,8 +8,9 @@ export, and XLSX export.
 
 The selected production architecture is **Firebase Auth + Cloud Firestore**.
 
-The current D1-backed API routes are transitional while the Firebase migration is
-implemented. See [ARCHITECTURE.md](./ARCHITECTURE.md) and
+The active browser read/write path uses Firebase Auth + Firestore. The older
+D1-backed API routes remain only as transitional code while the migration is
+finished and cleaned up. See [ARCHITECTURE.md](./ARCHITECTURE.md) and
 [FIREBASE.md](./FIREBASE.md) for the target runtime, data path, and migration
 plan.
 
@@ -21,12 +22,13 @@ plan.
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 npm run build
 ```
 
-The current local app still uses the existing Vinext/D1 development path until
-the Firebase Auth + Firestore read/write migration is complete.
+Fill in the Firebase Web App values in `.env.local` before starting the app.
+Anonymous Firebase Auth must be enabled in the Firebase console or emulator.
 
 ## Included Shape
 
