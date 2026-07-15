@@ -1,8 +1,10 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { JOB_STATUSES } from "@/lib/jobs/constants";
 import type { ColumnFilters, Job, LoadState, SortKey, Status } from "@/lib/jobs/types";
+
+const PAGE_SIZE_OPTIONS = [8, 12, 20] as const;
 
 type Props = {
   jobs: Job[];
@@ -57,6 +59,35 @@ export function OpportunitiesTable({
 }: Props) {
   const isLoadingJobs = loadState === "loading";
   const hasLoadError = loadState === "error";
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(8);
+  const totalPages = Math.max(1, Math.ceil(visibleJobs.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageStartIndex = visibleJobs.length ? (safeCurrentPage - 1) * pageSize : 0;
+  const pageEndIndex = Math.min(pageStartIndex + pageSize, visibleJobs.length);
+  const paginatedJobs = useMemo(
+    () => visibleJobs.slice(pageStartIndex, pageEndIndex),
+    [visibleJobs, pageStartIndex, pageEndIndex],
+  );
+
+  const goToPreviousPage = () => setCurrentPage((page) => Math.max(1, page - 1));
+  const goToNextPage = () => setCurrentPage((page) => Math.min(totalPages, page + 1));
+  const changePageSize = (nextPageSize: (typeof PAGE_SIZE_OPTIONS)[number]) => {
+    setPageSize(nextPageSize);
+    setCurrentPage(1);
+  };
+  const updateColumnFilters = (nextFilters: ColumnFilters) => {
+    setColumnFilters(nextFilters);
+    setCurrentPage(1);
+  };
+  const updateSort = (key: SortKey) => {
+    changeSort(key);
+    setCurrentPage(1);
+  };
+  const clearFiltersAndResetPage = () => {
+    clearColumnFilters();
+    setCurrentPage(1);
+  };
 
   return (
     <section className="tracker">
@@ -67,6 +98,7 @@ export function OpportunitiesTable({
         </div>
         <span>
           {visibleJobs.length} {visibleJobs.length === 1 ? "role" : "roles"}
+          {visibleJobs.length > pageSize ? ` • page ${safeCurrentPage} of ${totalPages}` : ""}
         </span>
       </div>
       <div className="toolbar">
@@ -74,7 +106,10 @@ export function OpportunitiesTable({
           <span>⌕</span>
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Search by role or company…"
             aria-label="Search applications"
           />
@@ -82,7 +117,14 @@ export function OpportunitiesTable({
         <div className="toolbarActions">
           <div className="filters" aria-label="Filter by status">
             {(["All", ...JOB_STATUSES] as const).map((item) => (
-              <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>
+              <button
+                key={item}
+                className={filter === item ? "active" : ""}
+                onClick={() => {
+                  setFilter(item);
+                  setCurrentPage(1);
+                }}
+              >
                 {item}
               </button>
             ))}
@@ -112,33 +154,56 @@ export function OpportunitiesTable({
           <button onClick={loadJobs}>Retry</button>
         </div>
       ) : jobs.length ? (
-        <div className="tableWrap">
+        <>
+          <div className="tableMeta" aria-live="polite">
+            <span>
+              {visibleJobs.length
+                ? `Showing ${pageStartIndex + 1}-${pageEndIndex} of ${visibleJobs.length} matching applications`
+                : "No matching applications"}
+            </span>
+            <label>
+              Rows per page
+              <select
+                value={pageSize}
+                onChange={(e) => changePageSize(Number(e.target.value) as (typeof PAGE_SIZE_OPTIONS)[number])}
+                aria-label="Rows per page"
+              >
+                {PAGE_SIZE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="tableWrap" tabIndex={0} aria-label="Scrollable applications table">
           <table>
             <thead>
               <tr className="columnHeadings">
                 <th>
-                  <button className={sort.key === "opportunity" ? "sorted" : ""} onClick={() => changeSort("opportunity")}>
+                  <button className={sort.key === "opportunity" ? "sorted" : ""} onClick={() => updateSort("opportunity")}>
                     Opportunity<span>{sortMark("opportunity")}</span>
                   </button>
                 </th>
                 <th>
-                  <button className={sort.key === "date" ? "sorted" : ""} onClick={() => changeSort("date")}>
+                  <button className={sort.key === "date" ? "sorted" : ""} onClick={() => updateSort("date")}>
                     Date applied<span>{sortMark("date")}</span>
                   </button>
                 </th>
                 <th>
-                  <button className={sort.key === "status" ? "sorted" : ""} onClick={() => changeSort("status")}>
+                  <button className={sort.key === "status" ? "sorted" : ""} onClick={() => updateSort("status")}>
                     Status<span>{sortMark("status")}</span>
                   </button>
                 </th>
                 <th>
-                  <button className={sort.key === "notes" ? "sorted" : ""} onClick={() => changeSort("notes")}>
+                  <button className={sort.key === "notes" ? "sorted" : ""} onClick={() => updateSort("notes")}>
                     Notes<span>{sortMark("notes")}</span>
                   </button>
                 </th>
                 <th>
                   {hasColumnFilters && (
-                    <button className="clearFilters" onClick={clearColumnFilters}>
+                    <button className="clearFilters" onClick={clearFiltersAndResetPage}>
                       Clear
                     </button>
                   )}
@@ -149,7 +214,7 @@ export function OpportunitiesTable({
                 <th>
                   <input
                     value={columnFilters.opportunity}
-                    onChange={(e) => setColumnFilters({ ...columnFilters, opportunity: e.target.value })}
+                    onChange={(e) => updateColumnFilters({ ...columnFilters, opportunity: e.target.value })}
                     placeholder="Filter role, company or URL"
                     aria-label="Filter opportunities"
                   />
@@ -158,14 +223,14 @@ export function OpportunitiesTable({
                   <input
                     type="date"
                     value={columnFilters.date}
-                    onChange={(e) => setColumnFilters({ ...columnFilters, date: e.target.value })}
+                    onChange={(e) => updateColumnFilters({ ...columnFilters, date: e.target.value })}
                     aria-label="Filter by application date"
                   />
                 </th>
                 <th>
                   <select
                     value={columnFilters.status}
-                    onChange={(e) => setColumnFilters({ ...columnFilters, status: e.target.value as Status | "All" })}
+                    onChange={(e) => updateColumnFilters({ ...columnFilters, status: e.target.value as Status | "All" })}
                     aria-label="Filter by column status"
                   >
                     <option>All</option>
@@ -177,7 +242,7 @@ export function OpportunitiesTable({
                 <th>
                   <input
                     value={columnFilters.notes}
-                    onChange={(e) => setColumnFilters({ ...columnFilters, notes: e.target.value })}
+                    onChange={(e) => updateColumnFilters({ ...columnFilters, notes: e.target.value })}
                     placeholder="Filter notes"
                     aria-label="Filter notes"
                   />
@@ -186,7 +251,7 @@ export function OpportunitiesTable({
               </tr>
             </thead>
             <tbody>
-              {visibleJobs.map((job) => {
+              {paginatedJobs.map((job) => {
                 const isDeleting = deletingIds.has(job.id);
                 const isSavingStatus = savingStatusIds.has(job.id);
                 return (
@@ -265,14 +330,34 @@ export function OpportunitiesTable({
                       <span>✦</span>
                       <h3>No matching opportunities</h3>
                       <p>Adjust or clear a filter to see more roles.</p>
-                      {hasColumnFilters && <button onClick={clearColumnFilters}>Clear column filters</button>}
+                      {hasColumnFilters && <button onClick={clearFiltersAndResetPage}>Clear column filters</button>}
                     </div>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
-        </div>
+          </div>
+          {visibleJobs.length > pageSize && (
+            <nav className="pagination" aria-label="Applications pagination">
+              <button onClick={() => setCurrentPage(1)} disabled={safeCurrentPage === 1}>
+                First
+              </button>
+              <button onClick={goToPreviousPage} disabled={safeCurrentPage === 1}>
+                Previous
+              </button>
+              <span>
+                Page <strong>{safeCurrentPage}</strong> of {totalPages}
+              </span>
+              <button onClick={goToNextPage} disabled={safeCurrentPage === totalPages}>
+                Next
+              </button>
+              <button onClick={() => setCurrentPage(totalPages)} disabled={safeCurrentPage === totalPages}>
+                Last
+              </button>
+            </nav>
+          )}
+        </>
       ) : (
         <div className="empty">
           <span>✦</span>

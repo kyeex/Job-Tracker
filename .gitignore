@@ -29,6 +29,7 @@ yarn-error.log*
 .pnpm-debug.log*
 dev-server.log
 local-preview.log
+local-preview-*.log
 
 # env files (can opt-in for committing if needed)
 .env*
