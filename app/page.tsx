@@ -173,7 +173,6 @@ export default function Home() {
 
       <DashboardStats jobs={jobs} />
       <MigrationBanner migration={migration} onImport={() => void importLegacyApplications()} />
-      <ApplicationRhythm jobs={jobs} />
       <OpportunitiesTable
         jobs={jobs}
         visibleJobs={visibleJobs}
@@ -199,6 +198,7 @@ export default function Home() {
         deletingIds={deletingIds}
         savingStatusIds={savingStatusIds}
       />
+      <ApplicationRhythm jobs={jobs} />
       <CareerHero />
       <ApplicationModal
         dialogOpen={dialogOpen}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import type { Job } from "@/lib/jobs/types";
 
 const dateKey = (date: Date) =>
@@ -18,6 +18,22 @@ function yearDays(year: number) {
 
 export function ApplicationRhythm({ jobs }: { jobs: Job[] }) {
   const [activityYear, setActivityYear] = useState(new Date().getFullYear());
+  const totalApplications = jobs.length;
+  const treeStages = [
+    { minimum: 0, name: "Seed", description: "Every search starts with a seed." },
+    { minimum: 1, name: "Seedling", description: "Your first application has broken ground." },
+    { minimum: 3, name: "Sprout", description: "A steady rhythm is taking root." },
+    { minimum: 7, name: "Sapling", description: "Your pipeline is growing branches." },
+    { minimum: 12, name: "Young tree", description: "Your search now has visible momentum." },
+    { minimum: 20, name: "Canopy", description: "A mature pipeline with deep roots." },
+  ] as const;
+  const treeStageIndex = treeStages.reduce(
+    (stageIndex, stage, index) => (totalApplications >= stage.minimum ? index : stageIndex),
+    0,
+  );
+  const treeStage = treeStages[treeStageIndex];
+  const growthPercent = Math.min(100, Math.round((totalApplications / 20) * 100));
+  const treeStyle = { "--growth": `${growthPercent}%` } as CSSProperties;
   const activityYears = useMemo(
     () =>
       Array.from(new Set([new Date().getFullYear(), ...jobs.map((job) => Number(job.date.slice(0, 4)))]))
@@ -113,6 +129,41 @@ export function ApplicationRhythm({ jobs }: { jobs: Job[] }) {
             <i key={level} className={`heatDay level-${level}`} />
           ))}
           <span>More</span>
+        </div>
+      </div>
+      <div className={`growthTreeCard growth-stage-${treeStageIndex}`} style={treeStyle}>
+        <div className="growthTreeCopy">
+          <p className="eyebrow">APPLICATION GROWTH</p>
+          <h3>Your search tree</h3>
+          <p>
+            {totalApplications} cumulative {totalApplications === 1 ? "application" : "applications"} planted so far.
+            {` ${treeStage.description}`}
+          </p>
+          <div className="growthMeter" aria-hidden="true">
+            <span />
+          </div>
+          <small>{treeStage.name} stage · grows toward a full canopy at 20 applications</small>
+        </div>
+        <div
+          className="growthTreeVisual"
+          role="img"
+          aria-label={`Application growth tree showing ${totalApplications} cumulative applications at the ${treeStage.name} stage`}
+        >
+          <span className="soil" />
+          <span className="seed" />
+          <span className="trunk" />
+          <span className="branch branch-left" />
+          <span className="branch branch-right" />
+          <span className="branch branch-high-left" />
+          <span className="branch branch-high-right" />
+          <span className="leaf leaf-1" />
+          <span className="leaf leaf-2" />
+          <span className="leaf leaf-3" />
+          <span className="leaf leaf-4" />
+          <span className="leaf leaf-5" />
+          <span className="leaf leaf-6" />
+          <span className="leaf leaf-7" />
+          <span className="leaf leaf-8" />
         </div>
       </div>
     </section>
