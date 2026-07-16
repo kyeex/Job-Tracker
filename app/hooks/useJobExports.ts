@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import type { Job } from "@/lib/jobs/types";
+import { formatLocalDate } from "@/lib/local-date";
 
 type Options = {
   jobs: Job[];
@@ -28,7 +29,7 @@ export function useJobExports({ jobs, visibleJobs, showToast }: Options) {
     if (!visibleJobs.length) return;
 
     const { makeXlsx } = await import("../lib/xlsx-export");
-    downloadBlob(makeXlsx(visibleJobs), `job-applications-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    downloadBlob(makeXlsx(visibleJobs), `job-applications-${formatLocalDate()}.xlsx`);
     showToast(`${visibleJobs.length} ${visibleJobs.length === 1 ? "row" : "rows"} exported to Excel`);
   }, [showToast, visibleJobs]);
 

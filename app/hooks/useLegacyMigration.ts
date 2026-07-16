@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import type { JobImportRecord, MigrationRecord, MigrationState, PersistedJob, Status } from "@/lib/jobs/types";
+import { formatLocalDate } from "@/lib/local-date";
 
 const legacyJobsKey = "job-tracker-jobs";
-const migrationCompleteKey = "job-tracker-d1-migration-complete";
+const migrationCompleteKey = "job-tracker-firestore-migration-complete";
 const migrationBackupKey = "job-tracker-jobs-backup";
 
 function readString(value: unknown) {
@@ -125,7 +126,7 @@ export function useLegacyMigration({
       return;
     }
 
-    const backupName = `job-tracker-local-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    const backupName = `job-tracker-local-backup-${formatLocalDate()}.json`;
     setMigration({ status: "importing", count: legacy.records.length });
 
     try {

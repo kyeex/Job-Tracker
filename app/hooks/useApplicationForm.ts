@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState, type FormEvent } from "react";
-import { emptyJob } from "@/lib/jobs/mappers";
+import { createEmptyJob } from "@/lib/jobs/mappers";
 import type { Job, Status } from "@/lib/jobs/types";
 
 type JobForm = Omit<Job, "id">;
@@ -17,13 +17,13 @@ type Options = {
 export function useApplicationForm({ addJob, editJob, deleteJob, updateJobStatus, showToast }: Options) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<JobForm>(emptyJob);
+  const [form, setForm] = useState<JobForm>(() => createEmptyJob());
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
   const openAdd = useCallback(() => {
     setEditingId(null);
-    setForm({ ...emptyJob, date: new Date().toISOString().slice(0, 10) });
+    setForm(createEmptyJob());
     setFormError("");
     setDialogOpen(true);
   }, []);

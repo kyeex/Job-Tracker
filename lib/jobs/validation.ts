@@ -1,5 +1,6 @@
 import { DEFAULT_JOB_STATUS, JOB_FIELD_LIMITS, JOB_STATUSES } from "./constants.ts";
 import type { JobPayload, JobStatus, JobUpdateInput } from "./types";
+import { formatLocalDate } from "../local-date.ts";
 
 type ValidationFailure = {
   ok: false;
@@ -61,7 +62,7 @@ function normalizeDate(value: unknown) {
   }
 
   const parsed = new Date(raw);
-  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
+  return Number.isNaN(parsed.getTime()) ? "" : formatLocalDate(parsed);
 }
 
 function normalizeUrl(value: unknown, fields: Record<string, string>) {

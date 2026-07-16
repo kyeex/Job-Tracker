@@ -1,14 +1,17 @@
-import { DEFAULT_JOB_STATUS } from "./constants";
+import { DEFAULT_JOB_STATUS } from "./constants.ts";
 import type { Job, JobPayload, PersistedJob } from "./types";
+import { formatLocalDate } from "../local-date.ts";
 
-export const emptyJob: Omit<Job, "id"> = {
-  date: new Date().toISOString().slice(0, 10),
-  title: "",
-  company: "",
-  url: "",
-  status: DEFAULT_JOB_STATUS,
-  notes: "",
-};
+export function createEmptyJob(date = new Date()): Omit<Job, "id"> {
+  return {
+    date: formatLocalDate(date),
+    title: "",
+    company: "",
+    url: "",
+    status: DEFAULT_JOB_STATUS,
+    notes: "",
+  };
+}
 
 export function mapPersistedJob(job: PersistedJob): Job {
   return {
