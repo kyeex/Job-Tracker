@@ -54,9 +54,14 @@ Firebase Hosting can serve the generated static client assets from `dist/client`
 
 ```bash
 npm run build
+npm run test:components
+npm run test:firebase
+npm run test:all
 npx firebase-tools emulators:start --project job-tracker-a8bee
 npx firebase-tools deploy --only firestore:rules,firestore:indexes --project job-tracker-a8bee
 npx firebase-tools deploy --only hosting --project job-tracker-a8bee
 ```
+
+`npm run test:firebase` starts an isolated Firestore emulator, loads the checked-in rules, runs the ownership and validation tests, and shuts the emulator down. It requires Java 11 or newer and never reads or writes production Firestore data. `npm run test:all` runs the build, unit tests, behavioral component tests, and emulator integration tests together.
 
 Do not use the Hosting deploy as the final production path until the Firebase environment values are configured in the hosting environment and the Firestore path is smoke-tested.
