@@ -2,9 +2,7 @@
 
 ## Decision
 
-The target production architecture for Jobfolio is **Firebase Auth + Cloud Firestore**.
-
-The existing Cloudflare D1 implementation is now considered a transitional data layer. The browser app's active read/write path is Firebase Auth + Firestore. D1 should remain in place only until existing browser/D1 records are migrated into Firestore and the old API/database code is removed.
+The production architecture for Jobfolio is **Firebase Auth + Cloud Firestore**. Firestore is the only application data store.
 
 ## Target runtime
 
@@ -43,24 +41,14 @@ All Firestore reads and writes must be scoped to the authenticated Firebase user
 
 Google sign-in is the recoverable production identity. Anonymous authentication is a temporary guest bridge so a user can begin tracking before connecting Google. The connection flow links the anonymous identity when possible and transfers records through a verified local backup when the Google identity already exists.
 
-## Migration strategy
-
-1. Add Firebase client initialization and Auth UI/state.
-2. Add a Firestore repository behind the existing job operations contract.
-3. Switch the UI read path from `/api/jobs`/D1 to Firebase Auth + Firestore.
-4. Switch the write path to Firestore.
-5. Build a one-time import flow from existing local/D1 records into `users/{userId}/jobApplications`.
-6. Verify filters, sorting, heat map, dashboard totals, backup export, and XLSX export against Firestore data.
-7. Remove D1-specific API routes, schema, migrations, and `.openai/hosting.json` D1 binding after the Firestore path is proven.
-
-## Current transitional state
+## Current state
 
 - Firebase project: `job-tracker-a8bee`
 - Firebase Hosting/Auth/Firestore emulator config exists in `firebase.json`
 - Firestore rules and indexes are version-controlled
 - The UI uses Firebase Auth + Firestore for job reads and writes
-- D1-backed `/api/jobs` routes still exist as transitional code
-- D1 should not be treated as the long-term production database
+- Firestore is the only persistence implementation
+- Browser-local and account-transfer imports write directly through the Firestore repository
 
 ## Deployment target
 
@@ -71,4 +59,4 @@ The long-term deployment target is Firebase-first:
 - Cloud Firestore for persistence
 - Firestore Security Rules for owner-scoped access control
 
-If server-side rendering or API endpoints remain necessary after the Firestore migration, add a Firebase-supported backend such as Cloud Run or Cloud Functions. Do not keep D1 as the production source of truth.
+If server-side APIs become necessary, add a Firebase-supported backend such as Cloud Run or Cloud Functions while retaining Firestore as the source of truth.

@@ -17,7 +17,7 @@ import {
   type Firestore,
 } from "@firebase/firestore";
 import { DEFAULT_JOB_STATUS } from "@/lib/jobs/constants";
-import type { ApiJob, JobImportRecord, JobInput, JobStatus, JobUpdateInput } from "@/lib/jobs/types";
+import type { JobImportRecord, JobInput, JobStatus, JobUpdateInput, PersistedJob } from "@/lib/jobs/types";
 import { requireValidJobInput, requireValidJobUpdate } from "@/lib/jobs/validation";
 import { getFirebaseClient, getFirebaseUser } from "./firebase-client";
 
@@ -43,7 +43,7 @@ function normalizeImportedTimestamp(value: string | undefined) {
   return Number.isNaN(date.getTime()) ? null : Timestamp.fromDate(date);
 }
 
-function mapJobDocument(id: string, data: DocumentData): ApiJob {
+function mapJobDocument(id: string, data: DocumentData): PersistedJob {
   const job = data as Partial<FirestoreJobDocument>;
   return {
     id,

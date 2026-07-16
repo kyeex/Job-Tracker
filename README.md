@@ -8,11 +8,9 @@ export, and XLSX export.
 
 The selected production architecture is **Firebase Auth + Cloud Firestore**.
 
-The active browser read/write path uses Firebase Auth + Firestore. The older
-D1-backed API routes remain only as transitional code while the migration is
-finished and cleaned up. See [ARCHITECTURE.md](./ARCHITECTURE.md) and
-[FIREBASE.md](./FIREBASE.md) for the target runtime, data path, and migration
-plan.
+The browser read/write path uses Firebase Auth + Firestore as its only
+persistence architecture. See [ARCHITECTURE.md](./ARCHITECTURE.md) and
+[FIREBASE.md](./FIREBASE.md) for the runtime and data path.
 
 ## Prerequisites
 
@@ -28,7 +26,7 @@ npm run build
 ```
 
 Fill in the Firebase Web App values in `.env.local` before starting the app.
-Anonymous Firebase Auth must be enabled in the Firebase console or emulator.
+Google and Anonymous Firebase Auth must be enabled in the Firebase console or emulator.
 
 ## Included Shape
 
@@ -38,7 +36,7 @@ Anonymous Firebase Auth must be enabled in the Firebase console or emulator.
 - `app/hooks/` contains data, filter, migration, and toast state hooks
 - `firebase.json`, `firestore.rules`, and `firestore.indexes.json` define the
   Firebase target scaffolding
-- `.openai/hosting.json` currently keeps the temporary local D1 binding alive
+- `.openai/hosting.json` declares no application database binding because Firestore is the source of truth
 
 ## Workspace Auth Headers
 
@@ -106,7 +104,6 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 - `npm run firebase:emulators`: start Firebase Auth, Firestore, and Hosting emulators
 - `npm run firebase:deploy:rules`: deploy Firestore rules and indexes
 - `npm run firebase:deploy:hosting`: build and deploy Firebase Hosting assets
-- `npm run db:generate`: transitional D1 migration generation while D1 remains
 
 ## Learn More
 

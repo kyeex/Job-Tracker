@@ -11,7 +11,6 @@
     "start": "node scripts/run-vinext.mjs start",
     "test": "npm run build && node --test tests/auth-transfer.test.mjs tests/rendered-html.test.mjs tests/job-validation.test.mjs tests/xlsx-export.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate",
     "firebase:emulators": "npx firebase-tools emulators:start --project job-tracker-a8bee",
     "firebase:deploy:rules": "npx firebase-tools deploy --only firestore:rules,firestore:indexes --project job-tracker-a8bee",
     "firebase:deploy:hosting": "npm run build && npx firebase-tools deploy --only hosting --project job-tracker-a8bee"
@@ -20,7 +19,6 @@
     "@firebase/app": "^0.15.1",
     "@firebase/auth": "^1.13.3",
     "@firebase/firestore": "^4.16.0",
-    "drizzle-orm": "0.45.2",
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6"
@@ -33,7 +31,6 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
-    "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
     "react-server-dom-webpack": "19.2.6",

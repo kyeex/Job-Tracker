@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { mapApiJob } from "@/lib/jobs/mappers";
-import type { ApiJob, Job, JobImportRecord, MigrationRecord, MigrationState, Status } from "@/lib/jobs/types";
+import { mapPersistedJob } from "@/lib/jobs/mappers";
+import type { Job, JobImportRecord, MigrationRecord, MigrationState, PersistedJob, Status } from "@/lib/jobs/types";
 
 const legacyJobsKey = "job-tracker-jobs";
 const migrationCompleteKey = "job-tracker-d1-migration-complete";
@@ -87,7 +87,7 @@ export function useLegacyMigration({
 }: {
   setJobs: React.Dispatch<React.SetStateAction<Job[]>>;
   showToast: (message: string) => void;
-  importJobs: (records: JobImportRecord[]) => Promise<{ result: { imported: number }; jobs: ApiJob[] }>;
+  importJobs: (records: JobImportRecord[]) => Promise<{ result: { imported: number }; jobs: PersistedJob[] }>;
 }) {
   const [migration, setMigration] = useState<MigrationState>({ status: "hidden", count: 0 });
 
@@ -148,7 +148,7 @@ export function useLegacyMigration({
         throw new Error(`Verified ${verifiedCount} of ${importedIds.size} imported applications.`);
       }
 
-      setJobs(jobs.map(mapApiJob));
+      setJobs(jobs.map(mapPersistedJob));
       window.localStorage.setItem(
         migrationCompleteKey,
         JSON.stringify({

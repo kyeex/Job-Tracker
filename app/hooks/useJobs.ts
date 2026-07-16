@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { mapApiJob, toJobPayload } from "@/lib/jobs/mappers";
+import { mapPersistedJob, toJobPayload } from "@/lib/jobs/mappers";
 import type { Job, LoadState, Status } from "@/lib/jobs/types";
 import {
   createFirestoreJob,
@@ -24,7 +24,7 @@ export function useJobs() {
 
     try {
       const data = await listFirestoreJobs();
-      setJobs(data.map(mapApiJob));
+      setJobs(data.map(mapPersistedJob));
       setLoadState("ready");
     } catch (error) {
       setJobs([]);
@@ -38,7 +38,7 @@ export function useJobs() {
   }, [loadJobs]);
 
   const addJob = useCallback(async (job: Omit<Job, "id">) => {
-    const saved = mapApiJob(await createFirestoreJob(toJobPayload(job)));
+    const saved = mapPersistedJob(await createFirestoreJob(toJobPayload(job)));
     setJobs((items) => [saved, ...items]);
     return saved;
   }, []);
@@ -49,7 +49,7 @@ export function useJobs() {
       throw new Error("The application could not be found in Firestore.");
     }
 
-    const saved = mapApiJob(data);
+    const saved = mapPersistedJob(data);
     setJobs((items) => items.map((item) => (item.id === id ? saved : item)));
     return saved;
   }, []);
@@ -81,7 +81,7 @@ export function useJobs() {
           throw new Error("The application could not be found in Firestore.");
         }
 
-        const saved = mapApiJob(data);
+        const saved = mapPersistedJob(data);
         setJobs((items) => items.map((item) => (item.id === job.id ? saved : item)));
         return saved;
       } finally {
@@ -98,7 +98,7 @@ export function useJobs() {
   const importJobs = useCallback(async (records: Parameters<typeof importFirestoreJobs>[0]) => {
     const result = await importFirestoreJobs(records);
     const data = await listFirestoreJobs();
-    setJobs(data.map(mapApiJob));
+    setJobs(data.map(mapPersistedJob));
     return { result, jobs: data };
   }, []);
 

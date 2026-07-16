@@ -14,7 +14,7 @@ This repo is connected to Firebase project `job-tracker-a8bee` through `.firebas
 
 The selected target architecture is **Firebase Auth + Cloud Firestore**.
 
-The browser app now uses Firebase Auth + Firestore for job application reads and writes. The current D1-backed API routes are transitional and should be removed after the Firestore path is verified and existing records are migrated.
+The browser app uses Firebase Auth + Firestore for all job application reads and writes. The retired D1 routes, schema, and migrations have been removed.
 
 Firestore documents should live at:
 

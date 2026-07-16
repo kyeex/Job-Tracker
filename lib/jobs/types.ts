@@ -13,7 +13,7 @@ export type Job = {
   notes: string;
 };
 
-export type ApiJob = {
+export type PersistedJob = {
   id: string;
   dateApplied: string;
   jobTitle: string;
@@ -21,11 +21,6 @@ export type ApiJob = {
   jobUrl: string;
   status: JobStatus;
   notes: string;
-};
-
-export type DbJobApplication = ApiJob & {
-  createdAt: string;
-  updatedAt: string;
 };
 
 export type JobPayload = {
@@ -52,18 +47,6 @@ export type JobImportRecord = JobInput & {
   id?: string;
   createdAt?: string;
   updatedAt?: string;
-};
-
-export type JobApplicationRow = {
-  id: string;
-  date_applied: string;
-  job_title: string;
-  company: string;
-  job_url: string;
-  status: JobStatus;
-  notes: string;
-  created_at: string;
-  updated_at: string;
 };
 
 export type MigrationRecord = JobPayload & { id: string };

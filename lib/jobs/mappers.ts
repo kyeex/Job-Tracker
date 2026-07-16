@@ -1,5 +1,5 @@
 import { DEFAULT_JOB_STATUS } from "./constants";
-import type { ApiJob, DbJobApplication, Job, JobApplicationRow, JobInput, JobPayload } from "./types";
+import type { Job, JobPayload, PersistedJob } from "./types";
 
 export const emptyJob: Omit<Job, "id"> = {
   date: new Date().toISOString().slice(0, 10),
@@ -10,7 +10,7 @@ export const emptyJob: Omit<Job, "id"> = {
   notes: "",
 };
 
-export function mapApiJob(job: ApiJob): Job {
+export function mapPersistedJob(job: PersistedJob): Job {
   return {
     id: job.id,
     date: job.dateApplied,
@@ -30,30 +30,5 @@ export function toJobPayload(job: Omit<Job, "id">): JobPayload {
     jobUrl: job.url,
     status: job.status,
     notes: job.notes,
-  };
-}
-
-export function mapJobRow(row: JobApplicationRow): DbJobApplication {
-  return {
-    id: row.id,
-    dateApplied: row.date_applied,
-    jobTitle: row.job_title,
-    company: row.company,
-    jobUrl: row.job_url,
-    status: row.status,
-    notes: row.notes,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
-
-export function normalizeJobInput(input: JobInput) {
-  return {
-    dateApplied: input.dateApplied,
-    jobTitle: input.jobTitle.trim(),
-    company: input.company.trim(),
-    jobUrl: input.jobUrl?.trim() ?? "",
-    status: input.status ?? DEFAULT_JOB_STATUS,
-    notes: input.notes?.trim() ?? "",
   };
 }
