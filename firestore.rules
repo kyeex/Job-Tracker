@@ -2,8 +2,63 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function hasValidJobShape() {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'dateApplied',
+          'jobTitle',
+          'company',
+          'jobUrl',
+          'status',
+          'notes',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasAll([
+          'dateApplied',
+          'jobTitle',
+          'company',
+          'jobUrl',
+          'status',
+          'notes',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.dateApplied is string
+        && data.dateApplied.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.jobTitle is string
+        && data.jobTitle.size() > 0
+        && data.jobTitle.size() <= 200
+        && data.company is string
+        && data.company.size() > 0
+        && data.company.size() <= 200
+        && data.jobUrl is string
+        && data.jobUrl.size() <= 2048
+        && (data.jobUrl == '' || data.jobUrl.matches('^https?://.+$'))
+        && data.status is string
+        && data.status in ['Applied', 'Interview', 'Offer', 'Rejected']
+        && data.notes is string
+        && data.notes.size() <= 10000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
     match /users/{userId}/jobApplications/{applicationId} {
-      allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow read, delete: if isOwner(userId);
+
+      allow create: if isOwner(userId)
+        && hasValidJobShape()
+        && request.resource.data.createdAt <= request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && hasValidJobShape()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
     }
   }
 }

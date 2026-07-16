@@ -1,5 +1,5 @@
-import { DEFAULT_JOB_STATUS, JOB_FIELD_LIMITS, JOB_STATUSES } from "./constants";
-import type { JobInput, JobStatus, JobUpdateInput } from "./types";
+import { DEFAULT_JOB_STATUS, JOB_FIELD_LIMITS, JOB_STATUSES } from "./constants.ts";
+import type { JobPayload, JobStatus, JobUpdateInput } from "./types";
 
 type ValidationFailure = {
   ok: false;
@@ -8,13 +8,24 @@ type ValidationFailure = {
 
 type JobValidationSuccess = {
   ok: true;
-  input: JobInput;
+  input: JobPayload;
 };
 
 type JobUpdateValidationSuccess = {
   ok: true;
   input: JobUpdateInput;
 };
+
+export class JobValidationError extends Error {
+  readonly fields: Record<string, string>;
+
+  constructor(fields: Record<string, string>, context = "Job application") {
+    const details = Object.values(fields).join(" ");
+    super(`${context} is invalid.${details ? ` ${details}` : ""}`);
+    this.name = "JobValidationError";
+    this.fields = fields;
+  }
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -122,6 +133,7 @@ export function validateJobPayload(payload: unknown, options: { partial?: boolea
   const jobUrl = normalizeUrl(record.jobUrl ?? record.job_url ?? record.url, fields);
   const status = normalizeStatus(record.status, fields);
   const notes = readString(record.notes);
+  const hasStatus = "status" in record;
 
   if (!partial || "dateApplied" in record || "date_applied" in record || "date" in record) {
     if (!dateApplied) {
@@ -147,6 +159,10 @@ export function validateJobPayload(payload: unknown, options: { partial?: boolea
 
   if (notes.length > JOB_FIELD_LIMITS.notes) {
     fields.notes = `Notes must be ${JOB_FIELD_LIMITS.notes} characters or fewer.`;
+  }
+
+  if (partial && hasStatus && !status && !fields.status) {
+    fields.status = `Status must be one of: ${JOB_STATUSES.join(", ")}.`;
   }
 
   if (Object.keys(fields).length > 0) {
@@ -176,4 +192,22 @@ export function validateJobPayload(payload: unknown, options: { partial?: boolea
   }
 
   return { ok: true as const, input };
+}
+
+export function requireValidJobInput(payload: unknown, context?: string): JobPayload {
+  const validation = validateJobPayload(payload);
+  if (!validation.ok) {
+    throw new JobValidationError(validation.fields, context);
+  }
+
+  return validation.input;
+}
+
+export function requireValidJobUpdate(payload: unknown, context?: string): JobUpdateInput {
+  const validation = validateJobPayload(payload, { partial: true });
+  if (!validation.ok) {
+    throw new JobValidationError(validation.fields, context);
+  }
+
+  return validation.input;
 }

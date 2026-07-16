@@ -9,6 +9,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
   writeBatch,
   type DocumentData,
@@ -16,6 +17,7 @@ import {
 } from "@firebase/firestore";
 import { DEFAULT_JOB_STATUS } from "@/lib/jobs/constants";
 import type { ApiJob, JobImportRecord, JobInput, JobStatus, JobUpdateInput } from "@/lib/jobs/types";
+import { requireValidJobInput, requireValidJobUpdate } from "@/lib/jobs/validation";
 import { getFirebaseClient, getFirebaseUser } from "./firebase-client";
 
 type FirestoreJobDocument = {
@@ -33,15 +35,11 @@ function userJobsCollection(db: Firestore, userId: string) {
   return collection(db, "users", userId, "jobApplications");
 }
 
-function normalizeInput(input: JobInput): FirestoreJobDocument {
-  return {
-    dateApplied: input.dateApplied,
-    jobTitle: input.jobTitle.trim(),
-    company: input.company.trim(),
-    jobUrl: input.jobUrl?.trim() ?? "",
-    status: input.status ?? DEFAULT_JOB_STATUS,
-    notes: input.notes?.trim() ?? "",
-  };
+function normalizeImportedTimestamp(value: string | undefined) {
+  if (!value) return null;
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : Timestamp.fromDate(date);
 }
 
 function mapJobDocument(id: string, data: DocumentData): ApiJob {
@@ -71,7 +69,7 @@ export async function createFirestoreJob(input: JobInput) {
   const { db } = getFirebaseClient();
   const user = await getFirebaseUser();
   const reference = doc(userJobsCollection(db, user.uid));
-  const values = normalizeInput(input);
+  const values = requireValidJobInput(input);
 
   await setDoc(reference, {
     ...values,
@@ -85,14 +83,7 @@ export async function createFirestoreJob(input: JobInput) {
 export async function updateFirestoreJob(id: string, input: JobUpdateInput) {
   const { db } = getFirebaseClient();
   const user = await getFirebaseUser();
-  const updates: JobUpdateInput = {};
-
-  if (input.dateApplied !== undefined) updates.dateApplied = input.dateApplied;
-  if (input.jobTitle !== undefined) updates.jobTitle = input.jobTitle.trim();
-  if (input.company !== undefined) updates.company = input.company.trim();
-  if (input.jobUrl !== undefined) updates.jobUrl = input.jobUrl.trim();
-  if (input.status !== undefined) updates.status = input.status;
-  if (input.notes !== undefined) updates.notes = input.notes.trim();
+  const updates = requireValidJobUpdate(input);
 
   await updateDoc(doc(userJobsCollection(db, user.uid), id), {
     ...updates,
@@ -120,16 +111,22 @@ export async function importFirestoreJobs(records: JobImportRecord[]) {
   const user = await getFirebaseUser();
   const batch = writeBatch(db);
   const jobs = userJobsCollection(db, user.uid);
+  const existingIds = new Set((await getDocs(jobs)).docs.map((job) => job.id));
 
-  records.forEach((record) => {
+  records.forEach((record, index) => {
     const reference = record.id ? doc(jobs, record.id) : doc(jobs);
-    const values = normalizeInput(record);
+    const values = requireValidJobInput(record, `Imported application ${index + 1}`);
+    const timestamps = existingIds.has(reference.id)
+      ? { updatedAt: serverTimestamp() }
+      : {
+          createdAt: normalizeImportedTimestamp(record.createdAt) ?? serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
     batch.set(
       reference,
       {
         ...values,
-        createdAt: record.createdAt ?? serverTimestamp(),
-        updatedAt: record.updatedAt ?? serverTimestamp(),
+        ...timestamps,
       },
       { merge: true },
     );
