@@ -42,7 +42,7 @@ test("job tracker keeps the expected Firestore and migration affordances", async
 
   assert.match(migrationHook, /legacyJobsKey = "job-tracker-jobs"/);
   assert.match(migrationHook, /importJobs/);
-  assert.match(firestoreJobs, /importFirestoreJobs/);
+  assert.match(firestoreJobs, /createFirestoreJobsRepository/);
   assert.match(table, /onExport=\{exportExcel\}/);
   assert.match(exportHelper, /sheetData/);
   assert.match(constants, /JOB_STATUSES/);
@@ -152,8 +152,8 @@ test("deployment architecture is documented as Firebase Auth plus Firestore", as
   assert.match(firebase, /retired D1 routes, schema, and migrations have been removed/i);
   assert.match(security, /request\.auth\.uid == userId/);
   assert.match(rules, /users\/\{userId\}\/jobApplications\/\{applicationId\}/);
-  assert.match(useJobs, /listFirestoreJobs/);
-  assert.match(useJobs, /createFirestoreJob/);
+  assert.match(useJobs, /getFirebaseJobsRepository/);
+  assert.match(useJobs, /repository\.list/);
   assert.match(firestoreJobs, /users", userId, "jobApplications/);
   assert.doesNotMatch(useJobs, /\/api\/jobs/);
 });
@@ -196,18 +196,18 @@ test("recoverable Google authentication preserves guest applications", async () 
   assert.match(firebaseDocs, /Anonymous/);
 });
 
-test("Firestore updates read only the updated document", async () => {
-  const repository = await readFile(new URL("lib/firestore-jobs.ts", appRoot), "utf8");
-  const updateFunction = repository.slice(
-    repository.indexOf("export async function updateFirestoreJob"),
-    repository.indexOf("export async function deleteFirestoreJob"),
-  );
+test("Firestore data access implements the shared injectable repository contract", async () => {
+  const [contract, repository, useJobs] = await Promise.all([
+    readFile(new URL("../lib/jobs/repository.ts", appRoot), "utf8"),
+    readFile(new URL("lib/firestore-jobs.ts", appRoot), "utf8"),
+    readFile(new URL("hooks/useJobs.ts", appRoot), "utf8"),
+  ]);
 
-  assert.match(updateFunction, /const reference = doc/);
-  assert.match(updateFunction, /await updateDoc\(reference/);
-  assert.match(updateFunction, /await getDoc\(reference\)/);
-  assert.doesNotMatch(updateFunction, /listFirestoreJobs/);
-  assert.doesNotMatch(updateFunction, /getDocs/);
+  assert.match(contract, /export interface JobsRepository/);
+  assert.match(repository, /createFirestoreJobsRepository\(db: Firestore, userId: string\)/);
+  assert.match(repository, /getFirebaseJobsRepository/);
+  assert.match(useJobs, /repository\.update/);
+  assert.match(useJobs, /repository\.import/);
 });
 
 test("Firebase and Excel stay out of the initial page chunk", async () => {

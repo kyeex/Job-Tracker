@@ -18,7 +18,8 @@ import {
 } from "@firebase/firestore";
 import { DEFAULT_JOB_STATUS } from "@/lib/jobs/constants";
 import { FIRESTORE_IMPORT_BATCH_SIZE, prepareJobImports } from "@/lib/jobs/imports";
-import type { JobImportRecord, JobInput, JobStatus, JobUpdateInput, PersistedJob } from "@/lib/jobs/types";
+import type { JobImportRecord, JobStatus, PersistedJob } from "@/lib/jobs/types";
+import type { JobImportResult, JobsRepository } from "@/lib/jobs/repository";
 import { requireValidJobInput, requireValidJobUpdate } from "@/lib/jobs/validation";
 import { getFirebaseFirestore } from "./firebase-firestore";
 
@@ -61,57 +62,16 @@ function mapJobDocument(id: string, data: DocumentData): PersistedJob {
   };
 }
 
-export async function listFirestoreJobs(userId: string) {
-  const db = getFirebaseFirestore();
-  const snapshot = await getDocs(
-    query(userJobsCollection(db, userId), orderBy("dateApplied", "desc"), orderBy("updatedAt", "desc")),
-  );
-
-  return snapshot.docs.map((job) => mapJobDocument(job.id, job.data()));
-}
-
-export async function createFirestoreJob(userId: string, input: JobInput) {
-  const db = getFirebaseFirestore();
-  const reference = doc(userJobsCollection(db, userId));
-  const values = requireValidJobInput(input);
-
-  await setDoc(reference, {
-    ...values,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-
-  return { id: reference.id, ...values };
-}
-
-export async function updateFirestoreJob(userId: string, id: string, input: JobUpdateInput) {
-  const db = getFirebaseFirestore();
-  const updates = requireValidJobUpdate(input);
-  const reference = doc(userJobsCollection(db, userId), id);
-
-  await updateDoc(reference, {
-    ...updates,
-    updatedAt: serverTimestamp(),
-  });
-
-  const updated = await getDoc(reference);
-  return updated.exists() ? mapJobDocument(updated.id, updated.data()) : null;
-}
-
-export async function deleteFirestoreJob(userId: string, id: string) {
-  const db = getFirebaseFirestore();
-
-  await deleteDoc(doc(userJobsCollection(db, userId), id));
-  return true;
-}
-
-export async function importFirestoreJobsInto(db: Firestore, userId: string, records: JobImportRecord[]) {
+async function importJobs(
+  db: Firestore,
+  jobs: ReturnType<typeof userJobsCollection>,
+  records: JobImportRecord[],
+): Promise<JobImportResult> {
   if (!records.length) {
     return { imported: 0, created: 0, updated: 0, batches: 0 };
   }
 
   const prepared = prepareJobImports(records);
-  const jobs = userJobsCollection(db, userId);
   const existingIds = new Set((await getDocs(jobs)).docs.map((job) => job.id));
   let created = 0;
   let updated = 0;
@@ -146,6 +106,44 @@ export async function importFirestoreJobsInto(db: Firestore, userId: string, rec
   };
 }
 
-export function importFirestoreJobs(userId: string, records: JobImportRecord[]) {
-  return importFirestoreJobsInto(getFirebaseFirestore(), userId, records);
+export function createFirestoreJobsRepository(db: Firestore, userId: string): JobsRepository {
+  const jobs = userJobsCollection(db, userId);
+
+  return {
+    async list() {
+      const snapshot = await getDocs(query(jobs, orderBy("dateApplied", "desc"), orderBy("updatedAt", "desc")));
+      return snapshot.docs.map((job) => mapJobDocument(job.id, job.data()));
+    },
+
+    async create(input) {
+      const reference = doc(jobs);
+      const values = requireValidJobInput(input);
+      await setDoc(reference, {
+        ...values,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      return { id: reference.id, ...values };
+    },
+
+    async update(id, input) {
+      const updates = requireValidJobUpdate(input);
+      const reference = doc(jobs, id);
+      await updateDoc(reference, { ...updates, updatedAt: serverTimestamp() });
+      const updated = await getDoc(reference);
+      return updated.exists() ? mapJobDocument(updated.id, updated.data()) : null;
+    },
+
+    async remove(id) {
+      await deleteDoc(doc(jobs, id));
+    },
+
+    import(records) {
+      return importJobs(db, jobs, records);
+    },
+  };
+}
+
+export function getFirebaseJobsRepository(userId: string) {
+  return createFirestoreJobsRepository(getFirebaseFirestore(), userId);
 }

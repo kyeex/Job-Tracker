@@ -4,7 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { mapPersistedJob, toJobPayload } from "@/lib/jobs/mappers";
 import type { Job, JobImportRecord, LoadState, Status } from "@/lib/jobs/types";
 
-const loadFirestoreJobs = () => import("../lib/firestore-jobs");
+const loadJobsRepository = async (userId: string) => {
+  const { getFirebaseJobsRepository } = await import("../lib/firestore-jobs");
+  return getFirebaseJobsRepository(userId);
+};
 
 type UserJobStore = {
   ownerId: string | null;
@@ -52,8 +55,8 @@ export function useJobs(userId: string | null) {
     setLoadError("");
 
     try {
-      const { listFirestoreJobs } = await loadFirestoreJobs();
-      const data = await listFirestoreJobs(ownerId);
+      const repository = await loadJobsRepository(ownerId);
+      const data = await repository.list();
       if (activeUserIdRef.current !== ownerId) return;
 
       setStore({ ownerId, items: data.map(mapPersistedJob) });
@@ -74,8 +77,8 @@ export function useJobs(userId: string | null) {
   const addJob = useCallback(async (job: Omit<Job, "id">) => {
     requireUserId(userId);
     const ownerId = userId;
-    const { createFirestoreJob } = await loadFirestoreJobs();
-    const saved = mapPersistedJob(await createFirestoreJob(ownerId, toJobPayload(job)));
+    const repository = await loadJobsRepository(ownerId);
+    const saved = mapPersistedJob(await repository.create(toJobPayload(job)));
     updateUserJobs(ownerId, (items) => [saved, ...items]);
     return saved;
   }, [updateUserJobs, userId]);
@@ -83,8 +86,8 @@ export function useJobs(userId: string | null) {
   const editJob = useCallback(async (id: string, job: Omit<Job, "id">) => {
     requireUserId(userId);
     const ownerId = userId;
-    const { updateFirestoreJob } = await loadFirestoreJobs();
-    const data = await updateFirestoreJob(ownerId, id, toJobPayload(job));
+    const repository = await loadJobsRepository(ownerId);
+    const data = await repository.update(id, toJobPayload(job));
     if (!data) {
       throw new Error("The application could not be found in Firestore.");
     }
@@ -99,8 +102,8 @@ export function useJobs(userId: string | null) {
     const ownerId = userId;
     setDeletingIds((current) => new Set(current).add(id));
     try {
-      const { deleteFirestoreJob } = await loadFirestoreJobs();
-      await deleteFirestoreJob(ownerId, id);
+      const repository = await loadJobsRepository(ownerId);
+      await repository.remove(id);
       updateUserJobs(ownerId, (items) => items.filter((job) => job.id !== id));
     } finally {
       setDeletingIds((current) => {
@@ -121,8 +124,8 @@ export function useJobs(userId: string | null) {
 
       setSavingStatusIds((current) => new Set(current).add(job.id));
       try {
-        const { updateFirestoreJob } = await loadFirestoreJobs();
-        const data = await updateFirestoreJob(ownerId, job.id, { status });
+        const repository = await loadJobsRepository(ownerId);
+        const data = await repository.update(job.id, { status });
         if (!data) {
           throw new Error("The application could not be found in Firestore.");
         }
@@ -144,9 +147,9 @@ export function useJobs(userId: string | null) {
   const importJobs = useCallback(async (records: JobImportRecord[]) => {
     requireUserId(userId);
     const ownerId = userId;
-    const { importFirestoreJobs, listFirestoreJobs } = await loadFirestoreJobs();
-    const result = await importFirestoreJobs(ownerId, records);
-    const data = await listFirestoreJobs(ownerId);
+    const repository = await loadJobsRepository(ownerId);
+    const result = await repository.import(records);
+    const data = await repository.list();
     if (activeUserIdRef.current === ownerId) {
       setStore({ ownerId, items: data.map(mapPersistedJob) });
     }

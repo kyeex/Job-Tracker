@@ -9,7 +9,7 @@ import {
 import type { Firestore as InternalFirestore } from "@firebase/firestore";
 import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { importFirestoreJobsInto } from "@/app/lib/firestore-jobs";
+import { createFirestoreJobsRepository } from "@/app/lib/firestore-jobs";
 
 const PROJECT_ID = "job-tracker-a8bee";
 let environment: RulesTestEnvironment;
@@ -91,9 +91,33 @@ describe("job application Firestore rules", () => {
     await assertFails(updateDoc(ref, { status: "Offer", updatedAt: new Date("2020-01-01") }));
   });
 
+  it("runs the real repository CRUD implementation against an authenticated emulator context", async () => {
+    const userId = "repository-owner";
+    const firestore = environment.authenticatedContext(userId).firestore();
+    const repository = createFirestoreJobsRepository(firestore as unknown as InternalFirestore, userId);
+
+    const created = await repository.create({
+      dateApplied: "2026-07-16",
+      jobTitle: "Repository Engineer",
+      company: "Acme Labs",
+      jobUrl: "https://example.com/repository-engineer",
+      status: "Applied",
+      notes: "Created through the production repository",
+    });
+    expect(created.id).toBeTruthy();
+    await expect(repository.list()).resolves.toEqual([created]);
+
+    const updated = await repository.update(created.id, { status: "Interview", notes: "Screen scheduled" });
+    expect(updated).toMatchObject({ id: created.id, status: "Interview", notes: "Screen scheduled" });
+
+    await repository.remove(created.id);
+    await expect(repository.list()).resolves.toEqual([]);
+  });
+
   it("imports more than 500 records in chunks and remains idempotent when rerun", async () => {
     const userId = "bulk-owner";
     const firestore = environment.authenticatedContext(userId).firestore();
+    const repository = createFirestoreJobsRepository(firestore as unknown as InternalFirestore, userId);
     const records = Array.from({ length: 625 }, (_, index) => ({
       dateApplied: `2026-${String((index % 12) + 1).padStart(2, "0")}-${String((index % 28) + 1).padStart(2, "0")}`,
       jobTitle: `Imported role ${index + 1}`,
@@ -104,7 +128,7 @@ describe("job application Firestore rules", () => {
     }));
     const jobs = collection(firestore, "users", userId, "jobApplications");
 
-    const first = await importFirestoreJobsInto(firestore as unknown as InternalFirestore, userId, records);
+    const first = await repository.import(records);
     const firstSnapshot = await getDocs(jobs);
     const firstIds = firstSnapshot.docs.map((item) => item.id).sort();
     const createdAtById = new Map(
@@ -114,7 +138,7 @@ describe("job application Firestore rules", () => {
     expect(first).toEqual({ imported: 625, created: 625, updated: 0, batches: 2 });
     expect(firstSnapshot.size).toBe(625);
 
-    const second = await importFirestoreJobsInto(firestore as unknown as InternalFirestore, userId, records);
+    const second = await repository.import(records);
     const secondSnapshot = await getDocs(jobs);
 
     expect(second).toEqual({ imported: 625, created: 0, updated: 625, batches: 2 });
