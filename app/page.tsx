@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { AccountControl } from "./components/AccountControl";
 import { ApplicationModal } from "./components/ApplicationModal";
 import { ApplicationRhythm } from "./components/ApplicationRhythm";
 import { CareerHero } from "./components/CareerHero";
@@ -9,12 +10,19 @@ import { MigrationBanner } from "./components/MigrationBanner";
 import { OpportunitiesTable } from "./components/OpportunitiesTable";
 import { Toast } from "./components/Toast";
 import { useJobFilters } from "./hooks/useJobFilters";
+import { useFirebaseAuth } from "./hooks/useFirebaseAuth";
 import { useJobs } from "./hooks/useJobs";
 import { useLegacyMigration } from "./hooks/useLegacyMigration";
 import { useToast } from "./hooks/useToast";
 import { emptyJob } from "@/lib/jobs/mappers";
 import type { Job, Status } from "@/lib/jobs/types";
 import { makeXlsx } from "./lib/xlsx-export";
+import {
+  clearAuthTransfer,
+  createAuthTransferRecords,
+  readAuthTransfer,
+  saveAuthTransfer,
+} from "./lib/auth-transfer";
 
 export default function Home() {
   const {
@@ -46,15 +54,68 @@ export default function Home() {
     visibleJobs,
   } = useJobFilters(jobs);
   const { toast, showToast } = useToast();
+  const auth = useFirebaseAuth();
   const { migration, importLegacyApplications } = useLegacyMigration({ setJobs, showToast, importJobs });
+  const transferPromise = useRef<Promise<number> | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyJob);
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
-  const isLoadingJobs = loadState === "loading";
-  const hasLoadError = loadState === "error";
+  const restoreAuthTransfer = useCallback(() => {
+    if (transferPromise.current) return transferPromise.current;
+
+    const records = readAuthTransfer();
+    if (!records.length) return Promise.resolve(0);
+
+    const restore = importJobs(records)
+      .then(() => {
+        clearAuthTransfer();
+        return records.length;
+      })
+      .finally(() => {
+        transferPromise.current = null;
+      });
+    transferPromise.current = restore;
+    return restore;
+  }, [importJobs]);
+
+  useEffect(() => {
+    if (auth.user && !auth.user.isAnonymous) {
+      void restoreAuthTransfer().then((restored) => {
+        if (restored) showToast(`${restored} applications restored to your Google account`);
+      }).catch(() => undefined);
+    }
+  }, [auth.user, restoreAuthTransfer, showToast]);
+
+  const connectGoogle = async () => {
+    const records = createAuthTransferRecords(jobs);
+    saveAuthTransfer(records);
+
+    try {
+      const result = await auth.connectGoogle();
+      if (result.accountChanged) {
+        await restoreAuthTransfer();
+      } else {
+        clearAuthTransfer();
+        await loadJobs();
+      }
+      showToast("Google account connected. Your applications are now recoverable.");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Google account connection failed.");
+    }
+  };
+
+  const signOutAccount = async () => {
+    try {
+      await auth.continueAsGuest();
+      await loadJobs();
+      showToast("Signed out. This guest session starts with a separate application list.");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "The account could not be signed out.");
+    }
+  };
 
   const openAdd = () => {
     setEditingId(null);
@@ -162,9 +223,14 @@ export default function Home() {
           </span>
         </button>
         <div className="headerActions">
-          <span className={`localBadge ${hasLoadError ? "warning" : ""}`}>
-            <i /> {isLoadingJobs ? "Loading Firestore" : hasLoadError ? "Firestore retry needed" : "Loaded from Firestore"}
-          </span>
+          <AccountControl
+            user={auth.user}
+            state={auth.state}
+            busy={auth.busy}
+            error={auth.error}
+            onConnect={() => void connectGoogle()}
+            onSignOut={() => void signOutAccount()}
+          />
           <button className="iconButton" onClick={exportData} aria-label="Download backup" title="Download backup">
             ↓
           </button>

@@ -41,7 +41,7 @@ The existing centralized domain files in `lib/jobs/` remain the app-level source
 
 All Firestore reads and writes must be scoped to the authenticated Firebase user. The checked-in Firestore rules enforce that only `request.auth.uid == userId` can read or mutate a user's job application documents.
 
-Anonymous production access should not be able to read, create, update, delete, export, or import job records.
+Google sign-in is the recoverable production identity. Anonymous authentication is a temporary guest bridge so a user can begin tracking before connecting Google. The connection flow links the anonymous identity when possible and transfers records through a verified local backup when the Google identity already exists.
 
 ## Migration strategy
 

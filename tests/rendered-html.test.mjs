@@ -123,3 +123,26 @@ test("deployment architecture is documented as Firebase Auth plus Firestore", as
   assert.match(firestoreJobs, /users", userId, "jobApplications/);
   assert.doesNotMatch(useJobs, /\/api\/jobs/);
 });
+
+test("recoverable Google authentication preserves guest applications", async () => {
+  const [page, authHook, firebaseClient, accountControl, transfer, firebaseDocs] = await Promise.all([
+    readFile(new URL("page.tsx", appRoot), "utf8"),
+    readFile(new URL("hooks/useFirebaseAuth.ts", appRoot), "utf8"),
+    readFile(new URL("lib/firebase-client.ts", appRoot), "utf8"),
+    readFile(new URL("components/AccountControl.tsx", appRoot), "utf8"),
+    readFile(new URL("lib/auth-transfer.ts", appRoot), "utf8"),
+    readFile(new URL("../FIREBASE.md", appRoot), "utf8"),
+  ]);
+
+  assert.match(page, /<AccountControl/);
+  assert.match(page, /restoreAuthTransfer/);
+  assert.match(authHook, /connectGoogleAccount/);
+  assert.match(firebaseClient, /linkWithPopup/);
+  assert.match(firebaseClient, /signInWithCredential/);
+  assert.match(firebaseClient, /GoogleAuthProvider\.credentialFromError/);
+  assert.match(accountControl, /Applications recoverable/);
+  assert.match(transfer, /job-tracker-google-auth-transfer-v1/);
+  assert.match(firebaseDocs, /enable both/);
+  assert.match(firebaseDocs, /Google/);
+  assert.match(firebaseDocs, /Anonymous/);
+});
