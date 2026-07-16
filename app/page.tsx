@@ -24,9 +24,9 @@ import {
 } from "./lib/auth-transfer";
 
 export default function Home() {
+  const auth = useFirebaseAuth();
   const {
     jobs,
-    setJobs,
     loadState,
     loadError,
     loadJobs,
@@ -37,7 +37,7 @@ export default function Home() {
     deleteJob,
     updateJobStatus,
     importJobs,
-  } = useJobs();
+  } = useJobs(auth.user?.uid ?? null);
   const {
     search,
     setSearch,
@@ -53,8 +53,7 @@ export default function Home() {
     visibleJobs,
   } = useJobFilters(jobs);
   const { toast, showToast } = useToast();
-  const auth = useFirebaseAuth();
-  const { migration, importLegacyApplications } = useLegacyMigration({ setJobs, showToast, importJobs });
+  const { migration, importLegacyApplications } = useLegacyMigration({ showToast, importJobs });
   const transferPromise = useRef<Promise<number> | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -93,13 +92,7 @@ export default function Home() {
     saveAuthTransfer(records);
 
     try {
-      const result = await auth.connectGoogle();
-      if (result.accountChanged) {
-        await restoreAuthTransfer();
-      } else {
-        clearAuthTransfer();
-        await loadJobs();
-      }
+      await auth.connectGoogle();
       showToast("Google account connected. Your applications are now recoverable.");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Google account connection failed.");
@@ -109,7 +102,6 @@ export default function Home() {
   const signOutAccount = async () => {
     try {
       await auth.continueAsGuest();
-      await loadJobs();
       showToast("Signed out. This guest session starts with a separate application list.");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "The account could not be signed out.");

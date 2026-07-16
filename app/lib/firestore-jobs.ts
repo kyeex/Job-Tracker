@@ -19,7 +19,6 @@ import {
 import { DEFAULT_JOB_STATUS } from "@/lib/jobs/constants";
 import type { JobImportRecord, JobInput, JobStatus, JobUpdateInput, PersistedJob } from "@/lib/jobs/types";
 import { requireValidJobInput, requireValidJobUpdate } from "@/lib/jobs/validation";
-import { getFirebaseUser } from "./firebase-client";
 import { getFirebaseFirestore } from "./firebase-firestore";
 
 type FirestoreJobDocument = {
@@ -34,6 +33,10 @@ type FirestoreJobDocument = {
 };
 
 function userJobsCollection(db: Firestore, userId: string) {
+  if (!userId.trim()) {
+    throw new Error("A Firebase user ID is required to access job applications.");
+  }
+
   return collection(db, "users", userId, "jobApplications");
 }
 
@@ -57,20 +60,18 @@ function mapJobDocument(id: string, data: DocumentData): PersistedJob {
   };
 }
 
-export async function listFirestoreJobs() {
+export async function listFirestoreJobs(userId: string) {
   const db = getFirebaseFirestore();
-  const user = await getFirebaseUser();
   const snapshot = await getDocs(
-    query(userJobsCollection(db, user.uid), orderBy("dateApplied", "desc"), orderBy("updatedAt", "desc")),
+    query(userJobsCollection(db, userId), orderBy("dateApplied", "desc"), orderBy("updatedAt", "desc")),
   );
 
   return snapshot.docs.map((job) => mapJobDocument(job.id, job.data()));
 }
 
-export async function createFirestoreJob(input: JobInput) {
+export async function createFirestoreJob(userId: string, input: JobInput) {
   const db = getFirebaseFirestore();
-  const user = await getFirebaseUser();
-  const reference = doc(userJobsCollection(db, user.uid));
+  const reference = doc(userJobsCollection(db, userId));
   const values = requireValidJobInput(input);
 
   await setDoc(reference, {
@@ -82,11 +83,10 @@ export async function createFirestoreJob(input: JobInput) {
   return { id: reference.id, ...values };
 }
 
-export async function updateFirestoreJob(id: string, input: JobUpdateInput) {
+export async function updateFirestoreJob(userId: string, id: string, input: JobUpdateInput) {
   const db = getFirebaseFirestore();
-  const user = await getFirebaseUser();
   const updates = requireValidJobUpdate(input);
-  const reference = doc(userJobsCollection(db, user.uid), id);
+  const reference = doc(userJobsCollection(db, userId), id);
 
   await updateDoc(reference, {
     ...updates,
@@ -97,23 +97,21 @@ export async function updateFirestoreJob(id: string, input: JobUpdateInput) {
   return updated.exists() ? mapJobDocument(updated.id, updated.data()) : null;
 }
 
-export async function deleteFirestoreJob(id: string) {
+export async function deleteFirestoreJob(userId: string, id: string) {
   const db = getFirebaseFirestore();
-  const user = await getFirebaseUser();
 
-  await deleteDoc(doc(userJobsCollection(db, user.uid), id));
+  await deleteDoc(doc(userJobsCollection(db, userId), id));
   return true;
 }
 
-export async function importFirestoreJobs(records: JobImportRecord[]) {
+export async function importFirestoreJobs(userId: string, records: JobImportRecord[]) {
   if (!records.length) {
     return { imported: 0 };
   }
 
   const db = getFirebaseFirestore();
-  const user = await getFirebaseUser();
   const batch = writeBatch(db);
-  const jobs = userJobsCollection(db, user.uid);
+  const jobs = userJobsCollection(db, userId);
   const existingIds = new Set((await getDocs(jobs)).docs.map((job) => job.id));
 
   records.forEach((record, index) => {

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { mapPersistedJob } from "@/lib/jobs/mappers";
-import type { Job, JobImportRecord, MigrationRecord, MigrationState, PersistedJob, Status } from "@/lib/jobs/types";
+import type { JobImportRecord, MigrationRecord, MigrationState, PersistedJob, Status } from "@/lib/jobs/types";
 
 const legacyJobsKey = "job-tracker-jobs";
 const migrationCompleteKey = "job-tracker-d1-migration-complete";
@@ -81,11 +80,9 @@ function downloadJsonBackup(raw: string, filename: string) {
 }
 
 export function useLegacyMigration({
-  setJobs,
   showToast,
   importJobs,
 }: {
-  setJobs: React.Dispatch<React.SetStateAction<Job[]>>;
   showToast: (message: string) => void;
   importJobs: (records: JobImportRecord[]) => Promise<{ result: { imported: number }; jobs: PersistedJob[] }>;
 }) {
@@ -148,7 +145,6 @@ export function useLegacyMigration({
         throw new Error(`Verified ${verifiedCount} of ${importedIds.size} imported applications.`);
       }
 
-      setJobs(jobs.map(mapPersistedJob));
       window.localStorage.setItem(
         migrationCompleteKey,
         JSON.stringify({

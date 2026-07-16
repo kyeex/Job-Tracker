@@ -23,6 +23,8 @@ type FirebaseClient = {
 
 let client: FirebaseClient | null = null;
 let authEmulatorConnected = false;
+let persistencePromise: Promise<void> | null = null;
+let userInitializationPromise: Promise<User> | null = null;
 
 export type FirebaseAuthSnapshot = {
   uid: string;
@@ -102,16 +104,38 @@ export function getFirebaseClient() {
   return client;
 }
 
+function ensureLocalPersistence(auth: Auth) {
+  if (!persistencePromise) {
+    persistencePromise = setPersistence(auth, browserLocalPersistence).catch((error) => {
+      persistencePromise = null;
+      throw error;
+    });
+  }
+
+  return persistencePromise;
+}
+
+function startAnonymousSession(auth: Auth) {
+  if (!userInitializationPromise) {
+    userInitializationPromise = signInAnonymously(auth)
+      .then((credential) => credential.user)
+      .finally(() => {
+        userInitializationPromise = null;
+      });
+  }
+
+  return userInitializationPromise;
+}
+
 export async function getFirebaseUser(): Promise<User> {
   const { auth } = getFirebaseClient();
-  await setPersistence(auth, browserLocalPersistence);
+  await ensureLocalPersistence(auth);
 
   if (auth.currentUser) {
     return auth.currentUser;
   }
 
-  const credential = await signInAnonymously(auth);
-  return credential.user;
+  return startAnonymousSession(auth);
 }
 
 export function observeFirebaseUser(listener: (user: FirebaseAuthSnapshot | null) => void) {
@@ -150,9 +174,10 @@ export async function connectGoogleAccount(): Promise<GoogleConnectionResult> {
 
 export async function signOutToGuestSession() {
   const { auth } = getFirebaseClient();
-  await setPersistence(auth, browserLocalPersistence);
+  await ensureLocalPersistence(auth);
   await signOut(auth);
-  return toAuthSnapshot((await signInAnonymously(auth)).user);
+  userInitializationPromise = null;
+  return toAuthSnapshot(await startAnonymousSession(auth));
 }
 
 export function firebaseAuthErrorMessage(error: unknown) {
