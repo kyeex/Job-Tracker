@@ -93,6 +93,27 @@ test("opportunities table delegates toolbar, filters, rows, and pagination", asy
   assert.match(paginationHook, /export function getPageWindow/);
 });
 
+test("application rhythm delegates heat-map and tree calculations", async () => {
+  const [rhythm, activity] = await Promise.all([
+    readFile(new URL("components/ApplicationRhythm.tsx", appRoot), "utf8"),
+    readFile(new URL("../lib/jobs/activity.ts", appRoot), "utf8"),
+  ]);
+
+  for (const name of [
+    "getActivityYears",
+    "getApplicationActivity",
+    "getGrowthTreeProgress",
+    "getHeatmapLevel",
+    "getMonthGridColumn",
+    "getYearActivityStats",
+    "getYearDays",
+  ]) {
+    assert.match(rhythm, new RegExp(name));
+    assert.match(activity, new RegExp(`export function ${name}`));
+  }
+  assert.doesNotMatch(rhythm, /function yearDays|const treeStages|jobs\.reduce<Record/);
+});
+
 test("job domain types, constants, mappers, and validation are centralized", async () => {
   const [types, constants, mappers, validation, page, repository] = await Promise.all([
     readFile(new URL("../lib/jobs/types.ts", appRoot), "utf8"),

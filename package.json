@@ -9,7 +9,7 @@
     "dev": "node scripts/run-vinext.mjs dev",
     "build": "node scripts/run-vinext.mjs build",
     "start": "node scripts/run-vinext.mjs start",
-    "test": "npm run build && node --test tests/auth-transfer.test.mjs tests/rendered-html.test.mjs tests/job-validation.test.mjs tests/pagination.test.mjs tests/xlsx-export.test.mjs",
+    "test": "npm run build && node --test tests/application-activity.test.mjs tests/auth-transfer.test.mjs tests/rendered-html.test.mjs tests/job-validation.test.mjs tests/pagination.test.mjs tests/xlsx-export.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "firebase:emulators": "npx firebase-tools emulators:start --project job-tracker-a8bee",
     "firebase:deploy:rules": "npx firebase-tools deploy --only firestore:rules,firestore:indexes --project job-tracker-a8bee",
