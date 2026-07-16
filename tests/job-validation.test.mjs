@@ -5,6 +5,8 @@ import {
   requireValidJobInput,
   requireValidJobUpdate,
 } from "../lib/jobs/validation.ts";
+import { DEFAULT_JOB_STATUS, JOB_STATUSES } from "../lib/jobs/constants.ts";
+import { jobContractCases } from "./job-contract.ts";
 
 const validJob = {
   dateApplied: "2026-07-16",
@@ -58,5 +60,25 @@ test("shared validation rejects an empty or unsupported status update", () => {
       () => requireValidJobUpdate({ status }),
       (error) => error instanceof JobValidationError && Boolean(error.fields.status),
     );
+  }
+});
+
+test("the default status is part of the supported status contract", () => {
+  assert.ok(JOB_STATUSES.includes(DEFAULT_JOB_STATUS));
+});
+
+test("shared validation enforces every constants-driven job contract case", async (t) => {
+  for (const contractCase of jobContractCases) {
+    await t.test(contractCase.name, () => {
+      if (contractCase.accepted) {
+        assert.doesNotThrow(() => requireValidJobInput(contractCase.payload));
+        return;
+      }
+
+      assert.throws(
+        () => requireValidJobInput(contractCase.payload),
+        (error) => error instanceof JobValidationError,
+      );
+    });
   }
 });

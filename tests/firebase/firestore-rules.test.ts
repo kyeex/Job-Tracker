@@ -10,6 +10,8 @@ import type { Firestore as InternalFirestore } from "@firebase/firestore";
 import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createFirestoreJobsRepository } from "@/app/lib/firestore-jobs";
+import { requireValidJobInput } from "@/lib/jobs/validation";
+import { jobContractCases } from "../job-contract";
 
 const PROJECT_ID = "job-tracker-a8bee";
 let environment: RulesTestEnvironment;
@@ -81,6 +83,19 @@ describe("job application Firestore rules", () => {
     await assertFails(setDoc(applicationRef("owner", "bad-status"), validApplication({ status: "Archived" })));
     await assertFails(setDoc(applicationRef("owner", "bad-url"), validApplication({ jobUrl: "ftp://example.com/job" })));
     await assertFails(setDoc(applicationRef("owner", "long-title"), validApplication({ jobTitle: "x".repeat(201) })));
+  });
+
+  it("has behavioral parity with the constants-driven validation contract", async () => {
+    for (const [index, contractCase] of jobContractCases.entries()) {
+      const ref = applicationRef("contract-owner", `contract-${index}`);
+
+      if (contractCase.accepted) {
+        const normalized = requireValidJobInput(contractCase.payload);
+        await assertSucceeds(setDoc(ref, validApplication(normalized)));
+      } else {
+        await assertFails(setDoc(ref, validApplication(contractCase.payload)));
+      }
+    }
   });
 
   it("keeps createdAt immutable and requires a server update timestamp", async () => {
