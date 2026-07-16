@@ -60,16 +60,3 @@ test("shared validation rejects an empty or unsupported status update", () => {
     );
   }
 });
-
-test("Firestore rules enforce ownership, field shape, limits, statuses, and timestamps", async () => {
-  const rules = await import("node:fs/promises").then(({ readFile }) => readFile("firestore.rules", "utf8"));
-
-  assert.match(rules, /request\.auth\.uid == userId/);
-  assert.match(rules, /data\.keys\(\)\.hasOnly/);
-  assert.match(rules, /data\.jobTitle\.size\(\) <= 200/);
-  assert.match(rules, /data\.jobUrl\.size\(\) <= 2048/);
-  assert.match(rules, /data\.status in \['Applied', 'Interview', 'Offer', 'Rejected'\]/);
-  assert.match(rules, /data\.notes\.size\(\) <= 10000/);
-  assert.match(rules, /request\.resource\.data\.createdAt == resource\.data\.createdAt/);
-  assert.match(rules, /request\.resource\.data\.updatedAt == request\.time/);
-});

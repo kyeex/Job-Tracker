@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useJobFilters } from "@/app/hooks/useJobFilters";
 import { OpportunitiesTable } from "@/app/components/OpportunitiesTable";
-import type { Job, Status } from "@/lib/jobs/types";
+import type { Job, LoadState, Status } from "@/lib/jobs/types";
 import { describe, expect, it, vi } from "vitest";
 
 const makeJobs = (count: number): Job[] =>
@@ -25,6 +25,10 @@ type HarnessProps = {
   removeJob?: (id: string) => void;
   updateStatus?: (job: Job, status: Status) => void;
   exportExcel?: () => void;
+  loadState?: LoadState;
+  loadError?: string;
+  loadJobs?: () => void;
+  openAdd?: () => void;
 };
 
 function TableHarness({
@@ -33,6 +37,10 @@ function TableHarness({
   removeJob = vi.fn(),
   updateStatus = vi.fn(),
   exportExcel = vi.fn(),
+  loadState = "ready",
+  loadError = "",
+  loadJobs = vi.fn(),
+  openAdd = vi.fn(),
 }: HarnessProps) {
   const filters = useJobFilters(jobs);
 
@@ -40,12 +48,12 @@ function TableHarness({
     <OpportunitiesTable
       jobs={jobs}
       visibleJobs={filters.visibleJobs}
-      loadState="ready"
-      loadError=""
-      loadJobs={vi.fn()}
+      loadState={loadState}
+      loadError={loadError}
+      loadJobs={loadJobs}
       {...filters}
       exportExcel={exportExcel}
-      openAdd={vi.fn()}
+      openAdd={openAdd}
       openEdit={openEdit}
       removeJob={removeJob}
       updateStatus={updateStatus}
@@ -111,5 +119,25 @@ describe("OpportunitiesTable behavior", () => {
 
     await user.click(screen.getByRole("button", { name: "Delete Role 1" }));
     expect(removeJob).toHaveBeenCalledWith(job.id);
+  });
+
+  it("shows actionable loading, error, retry, and empty states", async () => {
+    const user = userEvent.setup();
+    const loadJobs = vi.fn();
+    const openAdd = vi.fn();
+    const view = render(<TableHarness jobs={[]} loadState="loading" loadJobs={loadJobs} openAdd={openAdd} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading opportunities");
+
+    view.rerender(
+      <TableHarness jobs={[]} loadState="error" loadError="Firestore unavailable" loadJobs={loadJobs} openAdd={openAdd} />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Firestore unavailable");
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+    expect(loadJobs).toHaveBeenCalledOnce();
+
+    view.rerender(<TableHarness jobs={[]} loadState="ready" loadJobs={loadJobs} openAdd={openAdd} />);
+    await user.click(screen.getByRole("button", { name: "Add application" }));
+    expect(openAdd).toHaveBeenCalledOnce();
   });
 });
