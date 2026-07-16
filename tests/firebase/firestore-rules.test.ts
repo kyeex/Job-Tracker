@@ -6,8 +6,10 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import type { Firestore as InternalFirestore } from "@firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { importFirestoreJobsInto } from "@/app/lib/firestore-jobs";
 
 const PROJECT_ID = "job-tracker-a8bee";
 let environment: RulesTestEnvironment;
@@ -87,5 +89,39 @@ describe("job application Firestore rules", () => {
 
     await assertFails(updateDoc(ref, { createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
     await assertFails(updateDoc(ref, { status: "Offer", updatedAt: new Date("2020-01-01") }));
+  });
+
+  it("imports more than 500 records in chunks and remains idempotent when rerun", async () => {
+    const userId = "bulk-owner";
+    const firestore = environment.authenticatedContext(userId).firestore();
+    const records = Array.from({ length: 625 }, (_, index) => ({
+      dateApplied: `2026-${String((index % 12) + 1).padStart(2, "0")}-${String((index % 28) + 1).padStart(2, "0")}`,
+      jobTitle: `Imported role ${index + 1}`,
+      company: `Company ${index % 25}`,
+      jobUrl: `https://example.com/jobs/${index + 1}`,
+      status: "Applied" as const,
+      notes: index % 2 ? "Follow up" : "",
+    }));
+    const jobs = collection(firestore, "users", userId, "jobApplications");
+
+    const first = await importFirestoreJobsInto(firestore as unknown as InternalFirestore, userId, records);
+    const firstSnapshot = await getDocs(jobs);
+    const firstIds = firstSnapshot.docs.map((item) => item.id).sort();
+    const createdAtById = new Map(
+      firstSnapshot.docs.map((item) => [item.id, item.data().createdAt.toMillis()]),
+    );
+
+    expect(first).toEqual({ imported: 625, created: 625, updated: 0, batches: 2 });
+    expect(firstSnapshot.size).toBe(625);
+
+    const second = await importFirestoreJobsInto(firestore as unknown as InternalFirestore, userId, records);
+    const secondSnapshot = await getDocs(jobs);
+
+    expect(second).toEqual({ imported: 625, created: 0, updated: 625, batches: 2 });
+    expect(secondSnapshot.size).toBe(625);
+    expect(secondSnapshot.docs.map((item) => item.id).sort()).toEqual(firstIds);
+    for (const item of secondSnapshot.docs) {
+      expect(item.data().createdAt.toMillis()).toBe(createdAtById.get(item.id));
+    }
   });
 });

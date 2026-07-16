@@ -17,6 +17,7 @@ import {
   type Firestore,
 } from "@firebase/firestore";
 import { DEFAULT_JOB_STATUS } from "@/lib/jobs/constants";
+import { FIRESTORE_IMPORT_BATCH_SIZE, prepareJobImports } from "@/lib/jobs/imports";
 import type { JobImportRecord, JobInput, JobStatus, JobUpdateInput, PersistedJob } from "@/lib/jobs/types";
 import { requireValidJobInput, requireValidJobUpdate } from "@/lib/jobs/validation";
 import { getFirebaseFirestore } from "./firebase-firestore";
@@ -104,35 +105,47 @@ export async function deleteFirestoreJob(userId: string, id: string) {
   return true;
 }
 
-export async function importFirestoreJobs(userId: string, records: JobImportRecord[]) {
+export async function importFirestoreJobsInto(db: Firestore, userId: string, records: JobImportRecord[]) {
   if (!records.length) {
-    return { imported: 0 };
+    return { imported: 0, created: 0, updated: 0, batches: 0 };
   }
 
-  const db = getFirebaseFirestore();
-  const batch = writeBatch(db);
+  const prepared = prepareJobImports(records);
   const jobs = userJobsCollection(db, userId);
   const existingIds = new Set((await getDocs(jobs)).docs.map((job) => job.id));
+  let created = 0;
+  let updated = 0;
 
-  records.forEach((record, index) => {
-    const reference = record.id ? doc(jobs, record.id) : doc(jobs);
-    const values = requireValidJobInput(record, `Imported application ${index + 1}`);
-    const timestamps = existingIds.has(reference.id)
-      ? { updatedAt: serverTimestamp() }
-      : {
-          createdAt: normalizeImportedTimestamp(record.createdAt) ?? serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-    batch.set(
-      reference,
-      {
-        ...values,
-        ...timestamps,
-      },
-      { merge: true },
-    );
-  });
+  for (let start = 0; start < prepared.length; start += FIRESTORE_IMPORT_BATCH_SIZE) {
+    const batch = writeBatch(db);
+    const recordsInBatch = prepared.slice(start, start + FIRESTORE_IMPORT_BATCH_SIZE);
 
-  await batch.commit();
-  return { imported: records.length };
+    recordsInBatch.forEach((record) => {
+      const reference = doc(jobs, record.id);
+      const exists = existingIds.has(record.id);
+      const timestamps = exists
+        ? { updatedAt: serverTimestamp() }
+        : {
+            createdAt: normalizeImportedTimestamp(record.createdAt) ?? serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          };
+      if (exists) updated += 1;
+      else created += 1;
+
+      batch.set(reference, { ...record.values, ...timestamps }, { merge: true });
+    });
+
+    await batch.commit();
+  }
+
+  return {
+    imported: prepared.length,
+    created,
+    updated,
+    batches: Math.ceil(prepared.length / FIRESTORE_IMPORT_BATCH_SIZE),
+  };
+}
+
+export function importFirestoreJobs(userId: string, records: JobImportRecord[]) {
+  return importFirestoreJobsInto(getFirebaseFirestore(), userId, records);
 }

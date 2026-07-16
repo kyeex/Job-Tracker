@@ -24,6 +24,8 @@ users/{userId}/jobApplications/{applicationId}
 
 The checked-in Firestore rules already enforce user ownership for that path.
 
+Application imports are validated in full before writing, use deterministic document IDs when a source ID is missing, and commit in batches of 400 writes. A partially completed import can therefore be retried without creating duplicate applications; existing documents retain their original `createdAt` timestamp.
+
 ## Required local environment
 
 Create `.env.local` from `.env.example` and fill in the Firebase Web App values from the Firebase console:
