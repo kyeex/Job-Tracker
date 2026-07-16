@@ -146,3 +146,17 @@ test("recoverable Google authentication preserves guest applications", async () 
   assert.match(firebaseDocs, /Google/);
   assert.match(firebaseDocs, /Anonymous/);
 });
+
+test("Firestore updates read only the updated document", async () => {
+  const repository = await readFile(new URL("lib/firestore-jobs.ts", appRoot), "utf8");
+  const updateFunction = repository.slice(
+    repository.indexOf("export async function updateFirestoreJob"),
+    repository.indexOf("export async function deleteFirestoreJob"),
+  );
+
+  assert.match(updateFunction, /const reference = doc/);
+  assert.match(updateFunction, /await updateDoc\(reference/);
+  assert.match(updateFunction, /await getDoc\(reference\)/);
+  assert.doesNotMatch(updateFunction, /listFirestoreJobs/);
+  assert.doesNotMatch(updateFunction, /getDocs/);
+});

@@ -4,6 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -84,14 +85,15 @@ export async function updateFirestoreJob(id: string, input: JobUpdateInput) {
   const { db } = getFirebaseClient();
   const user = await getFirebaseUser();
   const updates = requireValidJobUpdate(input);
+  const reference = doc(userJobsCollection(db, user.uid), id);
 
-  await updateDoc(doc(userJobsCollection(db, user.uid), id), {
+  await updateDoc(reference, {
     ...updates,
     updatedAt: serverTimestamp(),
   });
 
-  const existing = await listFirestoreJobs();
-  return existing.find((job) => job.id === id) ?? null;
+  const updated = await getDoc(reference);
+  return updated.exists() ? mapJobDocument(updated.id, updated.data()) : null;
 }
 
 export async function deleteFirestoreJob(id: string) {
