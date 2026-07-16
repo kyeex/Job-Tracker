@@ -43,7 +43,7 @@ test("job tracker keeps the expected Firestore and migration affordances", async
   assert.match(migrationHook, /legacyJobsKey = "job-tracker-jobs"/);
   assert.match(migrationHook, /importJobs/);
   assert.match(firestoreJobs, /importFirestoreJobs/);
-  assert.match(table, /Export Excel/);
+  assert.match(table, /onExport=\{exportExcel\}/);
   assert.match(exportHelper, /sheetData/);
   assert.match(constants, /JOB_STATUSES/);
   assert.match(validation, /JOB_FIELD_LIMITS/);
@@ -70,6 +70,27 @@ test("page delegates major responsibilities to extracted hooks and components", 
   }
 
   assert.doesNotMatch(page, /function makeXlsx|function yearDays|function readLegacyRecords/);
+});
+
+test("opportunities table delegates toolbar, filters, rows, and pagination", async () => {
+  const [table, toolbar, filters, row, pagination, paginationHook] = await Promise.all([
+    readFile(new URL("components/OpportunitiesTable.tsx", appRoot), "utf8"),
+    readFile(new URL("components/OpportunitiesToolbar.tsx", appRoot), "utf8"),
+    readFile(new URL("components/OpportunitiesFilters.tsx", appRoot), "utf8"),
+    readFile(new URL("components/OpportunityRow.tsx", appRoot), "utf8"),
+    readFile(new URL("components/PaginationControls.tsx", appRoot), "utf8"),
+    readFile(new URL("hooks/usePagination.ts", appRoot), "utf8"),
+  ]);
+
+  for (const name of ["OpportunitiesToolbar", "OpportunitiesFilters", "OpportunityRow", "PaginationControls"]) {
+    assert.match(table, new RegExp(name));
+  }
+  assert.match(table, /usePagination/);
+  assert.match(toolbar, /Export Excel/);
+  assert.match(filters, /Filter role, company or URL/);
+  assert.match(row, /target="_blank"/);
+  assert.match(pagination, /Applications pagination/);
+  assert.match(paginationHook, /export function getPageWindow/);
 });
 
 test("job domain types, constants, mappers, and validation are centralized", async () => {
