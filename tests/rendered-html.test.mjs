@@ -209,3 +209,16 @@ test("Firestore updates read only the updated document", async () => {
   assert.doesNotMatch(updateFunction, /listFirestoreJobs/);
   assert.doesNotMatch(updateFunction, /getDocs/);
 });
+
+test("Firebase and Excel stay out of the initial page chunk", async () => {
+  const [page, jobsHook, authHook] = await Promise.all([
+    readFile(new URL("page.tsx", appRoot), "utf8"),
+    readFile(new URL("hooks/useJobs.ts", appRoot), "utf8"),
+    readFile(new URL("hooks/useFirebaseAuth.ts", appRoot), "utf8"),
+  ]);
+
+  assert.match(page, /await import\("\.\/lib\/xlsx-export"\)/);
+  assert.doesNotMatch(page, /import \{ makeXlsx \} from/);
+  assert.match(jobsHook, /import\("\.\.\/lib\/firestore-jobs"\)/);
+  assert.match(authHook, /import\("\.\.\/lib\/firebase-client"\)/);
+});

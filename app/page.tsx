@@ -16,7 +16,6 @@ import { useLegacyMigration } from "./hooks/useLegacyMigration";
 import { useToast } from "./hooks/useToast";
 import { emptyJob } from "@/lib/jobs/mappers";
 import type { Job, Status } from "@/lib/jobs/types";
-import { makeXlsx } from "./lib/xlsx-export";
 import {
   clearAuthTransfer,
   createAuthTransferRecords,
@@ -193,11 +192,12 @@ export default function Home() {
     showToast("Backup downloaded");
   };
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
     if (!visibleJobs.length) {
       return;
     }
 
+    const { makeXlsx } = await import("./lib/xlsx-export");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(makeXlsx(visibleJobs));
     link.download = `job-applications-${new Date().toISOString().slice(0, 10)}.xlsx`;

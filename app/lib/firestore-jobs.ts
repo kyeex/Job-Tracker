@@ -19,7 +19,8 @@ import {
 import { DEFAULT_JOB_STATUS } from "@/lib/jobs/constants";
 import type { JobImportRecord, JobInput, JobStatus, JobUpdateInput, PersistedJob } from "@/lib/jobs/types";
 import { requireValidJobInput, requireValidJobUpdate } from "@/lib/jobs/validation";
-import { getFirebaseClient, getFirebaseUser } from "./firebase-client";
+import { getFirebaseUser } from "./firebase-client";
+import { getFirebaseFirestore } from "./firebase-firestore";
 
 type FirestoreJobDocument = {
   dateApplied: string;
@@ -57,7 +58,7 @@ function mapJobDocument(id: string, data: DocumentData): PersistedJob {
 }
 
 export async function listFirestoreJobs() {
-  const { db } = getFirebaseClient();
+  const db = getFirebaseFirestore();
   const user = await getFirebaseUser();
   const snapshot = await getDocs(
     query(userJobsCollection(db, user.uid), orderBy("dateApplied", "desc"), orderBy("updatedAt", "desc")),
@@ -67,7 +68,7 @@ export async function listFirestoreJobs() {
 }
 
 export async function createFirestoreJob(input: JobInput) {
-  const { db } = getFirebaseClient();
+  const db = getFirebaseFirestore();
   const user = await getFirebaseUser();
   const reference = doc(userJobsCollection(db, user.uid));
   const values = requireValidJobInput(input);
@@ -82,7 +83,7 @@ export async function createFirestoreJob(input: JobInput) {
 }
 
 export async function updateFirestoreJob(id: string, input: JobUpdateInput) {
-  const { db } = getFirebaseClient();
+  const db = getFirebaseFirestore();
   const user = await getFirebaseUser();
   const updates = requireValidJobUpdate(input);
   const reference = doc(userJobsCollection(db, user.uid), id);
@@ -97,7 +98,7 @@ export async function updateFirestoreJob(id: string, input: JobUpdateInput) {
 }
 
 export async function deleteFirestoreJob(id: string) {
-  const { db } = getFirebaseClient();
+  const db = getFirebaseFirestore();
   const user = await getFirebaseUser();
 
   await deleteDoc(doc(userJobsCollection(db, user.uid), id));
@@ -109,7 +110,7 @@ export async function importFirestoreJobs(records: JobImportRecord[]) {
     return { imported: 0 };
   }
 
-  const { db } = getFirebaseClient();
+  const db = getFirebaseFirestore();
   const user = await getFirebaseUser();
   const batch = writeBatch(db);
   const jobs = userJobsCollection(db, user.uid);

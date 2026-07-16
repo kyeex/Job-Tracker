@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  connectGoogleAccount,
-  firebaseAuthErrorMessage,
-  getFirebaseUser,
-  observeFirebaseUser,
-  signOutToGuestSession,
-  type FirebaseAuthSnapshot,
-} from "../lib/firebase-client";
+import type { FirebaseAuthSnapshot } from "../lib/firebase-client";
+
+const loadFirebaseClient = () => import("../lib/firebase-client");
+
+async function getFirebaseAuthErrorMessage(error: unknown) {
+  const { firebaseAuthErrorMessage } = await loadFirebaseClient();
+  return firebaseAuthErrorMessage(error);
+}
 
 export function useFirebaseAuth() {
   const [user, setUser] = useState<FirebaseAuthSnapshot | null>(null);
@@ -20,10 +20,13 @@ export function useFirebaseAuth() {
     let unsubscribe = () => undefined;
     let active = true;
 
-    queueMicrotask(() => {
+    queueMicrotask(async () => {
       if (!active) return;
 
       try {
+        const { getFirebaseUser, observeFirebaseUser } = await loadFirebaseClient();
+        if (!active) return;
+
         unsubscribe = observeFirebaseUser((nextUser) => {
           if (!active) return;
           setUser(nextUser);
@@ -31,11 +34,15 @@ export function useFirebaseAuth() {
         });
         void getFirebaseUser().catch((authError) => {
           if (!active) return;
-          setError(firebaseAuthErrorMessage(authError));
-          setState("error");
+          void getFirebaseAuthErrorMessage(authError).then((message) => {
+            if (!active) return;
+            setError(message);
+            setState("error");
+          });
         });
       } catch (authError) {
-        setError(firebaseAuthErrorMessage(authError));
+        if (!active) return;
+        setError(await getFirebaseAuthErrorMessage(authError));
         setState("error");
       }
     });
@@ -50,12 +57,13 @@ export function useFirebaseAuth() {
     setBusy(true);
     setError("");
     try {
+      const { connectGoogleAccount } = await loadFirebaseClient();
       const result = await connectGoogleAccount();
       setUser(result.user);
       setState("ready");
       return result;
     } catch (authError) {
-      const message = firebaseAuthErrorMessage(authError);
+      const message = await getFirebaseAuthErrorMessage(authError);
       setError(message);
       throw new Error(message);
     } finally {
@@ -67,12 +75,13 @@ export function useFirebaseAuth() {
     setBusy(true);
     setError("");
     try {
+      const { signOutToGuestSession } = await loadFirebaseClient();
       const nextUser = await signOutToGuestSession();
       setUser(nextUser);
       setState("ready");
       return nextUser;
     } catch (authError) {
-      const message = firebaseAuthErrorMessage(authError);
+      const message = await getFirebaseAuthErrorMessage(authError);
       setError(message);
       throw new Error(message);
     } finally {
