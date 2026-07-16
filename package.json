@@ -10,7 +10,7 @@
     "build": "node scripts/run-vinext.mjs build",
     "start": "node scripts/run-vinext.mjs start",
     "test": "npm run build && npm run test:unit && npm run test:bundle && npm run test:components",
-    "test:unit": "node --test tests/application-activity.test.mjs tests/auth-transfer.test.mjs tests/job-imports.test.mjs tests/job-validation.test.mjs tests/pagination.test.mjs tests/xlsx-export.test.mjs",
+    "test:unit": "node --test tests/application-activity.test.mjs tests/auth-transfer.test.mjs tests/job-imports.test.mjs tests/job-scale.test.mjs tests/job-validation.test.mjs tests/pagination.test.mjs tests/xlsx-export.test.mjs",
     "test:bundle": "node --test tests/bundle-budget.test.mjs",
     "test:components": "vitest run --config vitest.config.ts",
     "test:firebase:run": "vitest run --config vitest.firebase.config.ts",

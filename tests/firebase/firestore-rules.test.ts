@@ -120,13 +120,13 @@ describe("job application Firestore rules", () => {
       notes: "Created through the production repository",
     });
     expect(created.id).toBeTruthy();
-    await expect(repository.list()).resolves.toEqual([created]);
+    await expect(repository.listAll()).resolves.toEqual([created]);
 
     const updated = await repository.update(created.id, { status: "Interview", notes: "Screen scheduled" });
     expect(updated).toMatchObject({ id: created.id, status: "Interview", notes: "Screen scheduled" });
 
     await repository.remove(created.id);
-    await expect(repository.list()).resolves.toEqual([]);
+    await expect(repository.listAll()).resolves.toEqual([]);
   });
 
   it("imports more than 500 records in chunks and remains idempotent when rerun", async () => {
@@ -152,6 +152,7 @@ describe("job application Firestore rules", () => {
 
     expect(first).toEqual({ imported: 625, created: 625, updated: 0, batches: 2 });
     expect(firstSnapshot.size).toBe(625);
+    await expect(repository.listAll()).resolves.toHaveLength(625);
 
     const second = await repository.import(records);
     const secondSnapshot = await getDocs(jobs);

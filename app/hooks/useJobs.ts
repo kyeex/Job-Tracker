@@ -56,7 +56,7 @@ export function useJobs(userId: string | null) {
 
     try {
       const repository = await loadJobsRepository(ownerId);
-      const data = await repository.list();
+      const data = await repository.listAll();
       if (activeUserIdRef.current !== ownerId) return;
 
       setStore({ ownerId, items: data.map(mapPersistedJob) });
@@ -149,7 +149,7 @@ export function useJobs(userId: string | null) {
     const ownerId = userId;
     const repository = await loadJobsRepository(ownerId);
     const result = await repository.import(records);
-    const data = await repository.list();
+    const data = await repository.listAll();
     if (activeUserIdRef.current === ownerId) {
       setStore({ ownerId, items: data.map(mapPersistedJob) });
     }

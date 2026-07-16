@@ -2,6 +2,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import type { ColumnFilters, Job, LoadState, SortKey, Status } from "@/lib/jobs/types";
+import { getFullCollectionScaleWarning } from "@/lib/jobs/scale";
 import { PAGE_SIZE_OPTIONS, usePagination, type PageSize } from "../hooks/usePagination";
 import { OpportunitiesFilters } from "./OpportunitiesFilters";
 import { OpportunitiesToolbar } from "./OpportunitiesToolbar";
@@ -62,6 +63,7 @@ export function OpportunitiesTable({
   const pagination = usePagination(visibleJobs);
   const isLoading = loadState === "loading";
   const hasLoadError = loadState === "error";
+  const scaleWarning = getFullCollectionScaleWarning(jobs.length);
 
   const updateColumnFilters = (nextFilters: ColumnFilters) => {
     setColumnFilters(nextFilters);
@@ -105,6 +107,12 @@ export function OpportunitiesTable({
         }}
         onExport={exportExcel}
       />
+
+      {scaleWarning && (
+        <div className="tableMeta" role="status">
+          <span>{scaleWarning}</span>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="empty loadingState" role="status" aria-live="polite">

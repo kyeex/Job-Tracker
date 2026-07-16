@@ -12,6 +12,8 @@ The browser read/write path uses Firebase Auth + Firestore as its only
 persistence architecture. See [ARCHITECTURE.md](./ARCHITECTURE.md) and
 [FIREBASE.md](./FIREBASE.md) for the runtime and data path.
 
+The current data-loading strategy is deliberately personal-scale: each signed-in user's complete application history is loaded so every dashboard view and export uses identical data. The table's pagination controls presentation rather than database reads; see the architecture decision for the 1,000-record review threshold.
+
 ## Prerequisites
 
 - Node.js `>=22.13.0`

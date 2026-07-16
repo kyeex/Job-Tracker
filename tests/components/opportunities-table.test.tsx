@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useJobFilters } from "@/app/hooks/useJobFilters";
 import { OpportunitiesTable } from "@/app/components/OpportunitiesTable";
+import { PERSONAL_SCALE_APPLICATION_WARNING_THRESHOLD } from "@/lib/jobs/constants";
 import type { Job, LoadState, Status } from "@/lib/jobs/types";
 import { describe, expect, it, vi } from "vitest";
 
@@ -139,5 +140,12 @@ describe("OpportunitiesTable behavior", () => {
     view.rerender(<TableHarness jobs={[]} loadState="ready" loadJobs={loadJobs} openAdd={openAdd} />);
     await user.click(screen.getByRole("button", { name: "Add application" }));
     expect(openAdd).toHaveBeenCalledOnce();
+  });
+
+  it("explains the full-collection constraint at the personal-scale threshold", () => {
+    render(<TableHarness jobs={makeJobs(PERSONAL_SCALE_APPLICATION_WARNING_THRESHOLD)} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("loads all 1,000 applications");
+    expect(screen.getByRole("status")).toHaveTextContent("complete history");
   });
 });

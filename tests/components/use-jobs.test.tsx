@@ -3,7 +3,7 @@ import { useJobs } from "@/app/hooks/useJobs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const repository = vi.hoisted(() => ({
-  list: vi.fn(),
+  listAll: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
@@ -29,7 +29,7 @@ describe("useJobs user scoping", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     repository.getFirebaseJobsRepository.mockImplementation((userId: string) => {
-      repository.list.mockResolvedValue([
+      repository.listAll.mockResolvedValue([
         {
           id: `${userId}-job`,
           dateApplied: "2026-07-16",
@@ -49,7 +49,7 @@ describe("useJobs user scoping", () => {
 
     expect(await screen.findByText("Role for user-a")).toBeInTheDocument();
     expect(repository.getFirebaseJobsRepository).toHaveBeenCalledWith("user-a");
-    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.listAll).toHaveBeenCalledOnce();
 
     view.rerender(<JobsHarness userId="user-b" />);
     expect(screen.queryByText("Role for user-a")).not.toBeInTheDocument();

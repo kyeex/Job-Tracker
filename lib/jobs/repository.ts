@@ -8,7 +8,8 @@ export type JobImportResult = {
 };
 
 export interface JobsRepository {
-  list(): Promise<PersistedJob[]>;
+  /** Loads the authenticated user's complete application history. */
+  listAll(): Promise<PersistedJob[]>;
   create(input: JobInput): Promise<PersistedJob>;
   update(id: string, input: JobUpdateInput): Promise<PersistedJob | null>;
   remove(id: string): Promise<void>;

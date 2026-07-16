@@ -50,6 +50,14 @@ Google sign-in is the recoverable production identity. Anonymous authentication 
 - Firestore is the only persistence implementation
 - Browser-local and account-transfer imports write directly through the Firestore repository
 
+## Personal-scale collection loading
+
+Jobfolio intentionally loads the authenticated user's complete application collection. This is an explicit personal-use constraint, not server-side pagination: the table paginates only what is rendered, while filters, sorting, dashboard totals, the heat map, growth tree, backup, and exports operate on the same complete in-memory history.
+
+The repository names this operation `listAll()` to keep that cost visible. At 1,000 applications the UI displays a scale notice. This is a review threshold rather than a hard record limit; writes and reads continue to work.
+
+Revisit this decision before supporting team accounts, routinely exceeding the threshold, or when measured startup latency and Firestore read cost become unacceptable. The replacement should combine cursor-based queries with server-derived aggregates and a streaming or server-side export path so pagination does not make totals or exports incomplete.
+
 ## Deployment target
 
 The long-term deployment target is Firebase-first:

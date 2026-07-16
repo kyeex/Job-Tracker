@@ -110,7 +110,7 @@ export function createFirestoreJobsRepository(db: Firestore, userId: string): Jo
   const jobs = userJobsCollection(db, userId);
 
   return {
-    async list() {
+    async listAll() {
       const snapshot = await getDocs(query(jobs, orderBy("dateApplied", "desc"), orderBy("updatedAt", "desc")));
       return snapshot.docs.map((job) => mapJobDocument(job.id, job.data()));
     },
